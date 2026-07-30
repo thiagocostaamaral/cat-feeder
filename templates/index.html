@@ -1,20 +1,33 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Cat Feeder</title>
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <div class="container">
-        <h1>🐱 Smart Cat Feeder</h1>
-        <button onclick="testMotor()">
-            Testar Motor
+        <h1>Smart Cat Feeder</h1>
+        <input
+            id="rotation"
+            type="number"
+            value="50"
+            step="1">
+        <button onclick="rotateMotor()">
+            Rotate
+        </button>
+        <button onclick="openMotor()">
+            Open
+        </button>
+        <button onclick="closeMotor()">
+            Close
         </button>
         <p id="status">
-            Pronto
+            Done
         </p>
     </div>
-<script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>
