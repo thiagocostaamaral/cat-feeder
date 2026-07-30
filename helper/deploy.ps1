@@ -17,6 +17,7 @@ if (Test-Path $credFile) {
 }
 
 $excludeDirs = ".git", "__pycache__", ".venv", "venv", "node_modules", "helper"
+$excludeFiles = "*.pyc", "credentials*", "INSTRUCTIONS.md"
 $excludeFiles = "*.pyc", "credentials*"
 
 Write-Host "Stopping ${ServiceName} service on ${PiUser}@${PiHost} ..."
