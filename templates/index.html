@@ -1,32 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cat Feeder</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
     <div class="container">
+        <div class="icon">🐱</div>
         <h1>Smart Cat Feeder</h1>
-        <input
-            id="rotation"
-            type="number"
-            value="50"
-            step="1">
-        <button onclick="rotateMotor()">
-            Rotate
-        </button>
-        <button onclick="openMotor()">
-            Open
-        </button>
-        <button onclick="closeMotor()">
-            Close
-        </button>
-        <p id="status">
-            Done
-        </p>
+        <p class="subtitle">Control your feeder from anywhere</p>
+
+        <div class="controls">
+            <div class="input-group">
+                <label for="rotation">Steps</label>
+                <input id="rotation" type="number" value="50" step="1" min="1">
+                <span>steps</span>
+            </div>
+
+            <button class="btn btn-rotate" onclick="rotateMotor()">
+                ↻ Rotate
+            </button>
+
+            <div class="btn-row">
+                <button class="btn btn-open" onclick="openMotor()">
+                    ▲ Open
+                </button>
+                <button class="btn btn-close" onclick="closeMotor()">
+                    ▼ Close
+                </button>
+            </div>
+        </div>
+
+        <div id="status" class="status idle">Ready</div>
     </div>
+
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 
