@@ -5,7 +5,8 @@ Smart cat feeder web app running on a **Raspberry Pi**. Flask backend controls a
 
 ## Tech Stack
 - **Backend:** Python 3 + Flask (`app.py`)
-- **Motor control:** `motor.py` (StepperMotor class, GPIO via RPi.GPIO)
+- **Motor control:** `motor.py` (StepperMotor class, GPIO via lgpio)
+- **Presence sensor:** `presence.py` (MH-SR602 PIR sensor, GPIO via lgpio)
 - **Frontend:** HTML + CSS + vanilla JS (`templates/`, `static/`)
 - **Pi service:** systemd unit at `/etc/systemd/system/cat-feeder.service`
 
@@ -13,8 +14,10 @@ Smart cat feeder web app running on a **Raspberry Pi**. Flask backend controls a
 ```
 cat-feeder/
 ├── app.py              # Flask routes & entry point (port 5000)
-├── motor.py            # StepperMotor class
-├── config.py           # Configuration (pins, etc.)
+├── motor.py            # StepperMotor class (lgpio)
+├── presence.py         # PresenceSensor class (MH-SR602 PIR, lgpio)
+├── system.py           # System stats (CPU, RAM, temp, uptime from /proc)
+├── config.py           # Configuration (pins: MOTOR_PINS, PIR_PIN)
 ├── requirements.txt    # Python dependencies
 ├── templates/
 │   └── index.html      # Web UI
@@ -29,14 +32,18 @@ cat-feeder/
 ```
 
 ## API Endpoints
-| Method | Route          | Body              | Response              |
-|--------|----------------|-------------------|-----------------------|
-| GET    | `/`            | —                 | HTML page             |
-| POST   | `/motor/open`  | —                 | `{"status":"ok"}`     |
-| POST   | `/motor/close` | —                 | `{"status":"ok"}`     |
-| POST   | `/motor/rotate`| `{"rotation": N}` | `{"status":"ok","rotation":N}` |
+| Method | Route           | Body              | Response                                      |
+|--------|-----------------|-------------------|-----------------------------------------------|
+| GET    | `/`             | —                 | HTML page (three tabs: Feeder, Presence, System) |
+| POST   | `/motor/open`   | —                 | `{"status":"ok"}`                             |
+| POST   | `/motor/close`  | —                 | `{"status":"ok"}`                             |
+| POST   | `/motor/rotate` | `{"rotation": N}` | `{"status":"ok","rotation":N}`                |
+| GET    | `/presence`     | —                 | `{"current":bool,"samples":[0,1,0,...]}`      |
+| GET    | `/status`       | —                 | `{"cpu_percent":N,"ram":{...},"temperature_c":N,"uptime":"..."}` |
 
 Open = 512 steps, Close = -512 steps.
+Presence samples = rolling last 120 seconds (1 sample/sec). `current` is the live PIR state.
+Status = live CPU/RAM/temp/uptime from /proc (100ms sample for CPU).
 
 ## Raspberry Pi Connection
 - **Hostname:** `RaspberryThiago`
@@ -71,3 +78,4 @@ sudo journalctl -u cat-feeder -f   # Follow logs
 - Follow existing patterns when adding routes/features
 - `deploy.ps1` handles service restart automatically
 - Pi runs Flask on all interfaces (`host="::"`) port 5000
+- MH-SR602 PIR sensor wired to GPIO pin 23 (configurable in `config.py` → `PIR_PIN`)

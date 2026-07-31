@@ -15,8 +15,8 @@ body {
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 24px;
-    padding: 40px 35px;
-    max-width: 380px;
+    padding: 32px 30px;
+    max-width: 400px;
     width: 100%;
     text-align: center;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
@@ -24,22 +24,55 @@ body {
 
 .icon {
     font-size: 60px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
 h1 {
     color: #fff;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 700;
-    margin: 0 0 6px 0;
+    margin: 0 0 18px 0;
     letter-spacing: -0.5px;
 }
 
-.subtitle {
-    color: rgba(255, 255, 255, 0.5);
+.tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    padding: 10px;
     font-size: 14px;
-    margin: 0 0 30px 0;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.tab:hover:not(.active) {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
 }
 
 .controls {
@@ -171,4 +204,108 @@ h1 {
 .status.loading {
     background: rgba(250, 204, 21, 0.15);
     color: #facc15;
+}
+
+.presence-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    transition: all 0.3s;
+}
+
+.presence-indicator.active {
+    background: rgba(34, 197, 94, 0.12);
+    color: #4ade80;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+.presence-indicator.active .dot {
+    background: #4ade80;
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
+}
+
+.graph-container {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    padding: 8px;
+    margin-bottom: 6px;
+}
+
+.graph-container canvas {
+    width: 100%;
+    height: 100px;
+    display: block;
+}
+
+.graph-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.25);
+    padding: 0 4px;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    margin-bottom: 10px;
+}
+
+.stat-label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 42px;
+    text-align: left;
+}
+
+.stat-value {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 70px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.bar-bg {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s, background 0.3s;
+    min-width: 0;
+}
+
+.bar-fill.cpu {
+    background: #f97316;
+}
+
+.bar-fill.ram {
+    background: #8b5cf6;
 }

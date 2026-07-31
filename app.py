@@ -1,8 +1,12 @@
 from flask import Flask, jsonify, render_template, request
 from motor import StepperMotor
+from presence import PresenceSensor
+from system import get_stats
+import config
 
 app = Flask(__name__)
-motor = StepperMotor()
+motor = StepperMotor(pins=config.MOTOR_PINS)
+presence = PresenceSensor(pin=config.PIR_PIN)
 
 @app.post("/motor/open")
 def open_motor():
@@ -27,6 +31,14 @@ def rotate_motor():
         "status": "ok",
         "rotation": rotation
     })
+
+@app.get("/presence")
+def get_presence():
+    return jsonify(presence.get_state())
+
+@app.get("/status")
+def get_status():
+    return jsonify(get_stats())
 
 @app.get("/")
 def index():

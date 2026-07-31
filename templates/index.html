@@ -12,30 +12,80 @@
     <div class="container">
         <div class="icon">🐱</div>
         <h1>Smart Cat Feeder</h1>
-        <p class="subtitle">Control your feeder from anywhere</p>
 
-        <div class="controls">
-            <div class="input-group">
-                <label for="rotation">Steps</label>
-                <input id="rotation" type="number" value="50" step="1" min="1">
-                <span>steps</span>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('feeder')">Feeder</button>
+            <button class="tab" onclick="switchTab('presence')">Presence</button>
+            <button class="tab" onclick="switchTab('system')">System</button>
+        </div>
+
+        <div id="tab-feeder" class="tab-content active">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="rotation">Steps</label>
+                    <input id="rotation" type="number" value="50" step="1" min="1">
+                    <span>steps</span>
+                </div>
+
+                <button class="btn btn-rotate" onclick="rotateMotor()">
+                    ↻ Rotate
+                </button>
+
+                <div class="btn-row">
+                    <button class="btn btn-open" onclick="openMotor()">
+                        ▲ Open
+                    </button>
+                    <button class="btn btn-close" onclick="closeMotor()">
+                        ▼ Close
+                    </button>
+                </div>
             </div>
 
-            <button class="btn btn-rotate" onclick="rotateMotor()">
-                ↻ Rotate
-            </button>
+            <div id="motor-status" class="status idle">Ready</div>
+        </div>
 
-            <div class="btn-row">
-                <button class="btn btn-open" onclick="openMotor()">
-                    ▲ Open
-                </button>
-                <button class="btn btn-close" onclick="closeMotor()">
-                    ▼ Close
-                </button>
+        <div id="tab-presence" class="tab-content">
+            <div class="presence-indicator" id="presence-dot">
+                <span class="dot"></span>
+                <span id="presence-label">No presence</span>
+            </div>
+
+            <div class="graph-container">
+                <canvas id="presence-graph"></canvas>
+            </div>
+            <div class="graph-labels">
+                <span>2m ago</span>
+                <span>now</span>
             </div>
         </div>
 
-        <div id="status" class="status idle">Ready</div>
+        <div id="tab-system" class="tab-content">
+            <div class="stat-row">
+                <span class="stat-label">CPU</span>
+                <div class="bar-bg">
+                    <div id="cpu-bar" class="bar-fill cpu" style="width:0%"></div>
+                </div>
+                <span id="cpu-text" class="stat-value">—</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">RAM</span>
+                <div class="bar-bg">
+                    <div id="ram-bar" class="bar-fill ram" style="width:0%"></div>
+                </div>
+                <span id="ram-text" class="stat-value">—</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">Temp</span>
+                <span id="temp-text" class="stat-value" style="flex:1;text-align:right">—</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">Uptime</span>
+                <span id="uptime-text" class="stat-value" style="flex:1;text-align:right">—</span>
+            </div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>

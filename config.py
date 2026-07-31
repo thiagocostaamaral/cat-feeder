@@ -1,0 +1,2 @@
+MOTOR_PINS = [17, 18, 27, 22]
+PIR_PIN = 23
