@@ -18,6 +18,7 @@ cat-feeder/
 ├── presence.py         # PresenceSensor class (MH-SR602 PIR, lgpio)
 ├── system.py           # System stats (CPU, RAM, temp, uptime from /proc)
 ├── scheduler.py        # Feeding schedule (background thread, JSON storage)
+├── camera.py           # OV5647 camera capture (rpicam-still), PhotoTrigger
 ├── config.py           # Configuration (pins: MOTOR_PINS, PIR_PIN)
 ├── requirements.txt    # Python dependencies
 ├── templates/
@@ -35,20 +36,24 @@ cat-feeder/
 ## API Endpoints
 | Method | Route           | Body              | Response                                      |
 |--------|-----------------|-------------------|-----------------------------------------------|
-| GET    | `/`             | —                 | HTML page (four tabs: Feeder, Presence, System, Schedule) |
+| GET    | `/`             | —                 | HTML page (5 tabs: Feeder, Presence, System, Schedule, Photos) |
 | POST   | `/motor/open`   | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/close`  | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/rotate` | `{"rotation": N}` | `{"status":"ok","rotation":N}`                |
 | GET    | `/presence`     | —                 | `{"current":bool,"samples":[0,1,0,...]}`      |
-| GET    | `/status`       | —                 | `{"cpu_percent":N,"ram":{...},"temperature_c":N,"uptime":"..."}` |
+| GET    | `/status`       | —                 | `{"cpu_percent":N,"ram":{...},"temperature_c":N,"uptime":"...","time":"HH:MM:SS"}` |
 | GET    | `/schedule`     | —                 | `[{id,time,rotation},...]`                    |
 | POST   | `/schedule`     | `{"time":"08:00","rotation":50}` | `{id,time,rotation}`               |
 | DELETE | `/schedule/<id>`| —                 | `{"status":"ok"}`                             |
+| GET    | `/photos`       | —                 | `[{name,url},...]`                            |
+| GET    | `/photos/<name>`| —                 | Serves JPEG file                              |
+| DELETE | `/photos/<name>`| —                 | `{"status":"ok"}`                             |
 
 Open = 512 steps, Close = -512 steps.
-Presence samples = rolling last 120 seconds (1 sample/sec).
-Status = live CPU/RAM/temp/uptime from /proc (100ms sample for CPU).
+Presence samples = rolling last 120 seconds (1 sample/sec). Motion triggers camera (10s cooldown).
+Status = live CPU/RAM/temp/uptime/time from /proc (100ms sample for CPU).
 Schedule = stored in `schedules.json`, background thread checks every 5s and fires motor at matching HH:MM.
+Photos = stored in `Photos/` directory, captured by OV5647 via rpicam-still when PIR detects motion.
 
 ## Raspberry Pi Connection
 - **Hostname:** `RaspberryThiago`

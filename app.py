@@ -1,13 +1,16 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from motor import StepperMotor
 from presence import PresenceSensor
 from system import get_stats
 from scheduler import Scheduler
+from camera import CameraTrigger, list_photos, delete_photo, PHOTOS_DIR
 import config
+import os
 
 app = Flask(__name__)
 motor = StepperMotor(pins=config.MOTOR_PINS)
-presence = PresenceSensor(pin=config.PIR_PIN)
+camera = CameraTrigger()
+presence = PresenceSensor(pin=config.PIR_PIN, on_detect=camera.on_detect)
 scheduler = Scheduler()
 scheduler.set_motor(motor)
 scheduler.start()
@@ -50,6 +53,19 @@ def add_schedule():
 @app.delete("/schedule/<schedule_id>")
 def remove_schedule(schedule_id):
     scheduler.remove(schedule_id)
+    return jsonify({"status":"ok"})
+
+@app.get("/photos")
+def get_photos():
+    return jsonify(list_photos())
+
+@app.get("/photos/<name>")
+def serve_photo(name):
+    return send_from_directory(PHOTOS_DIR, name)
+
+@app.delete("/photos/<name>")
+def remove_photo(name):
+    delete_photo(name)
     return jsonify({"status":"ok"})
 
 @app.get("/")

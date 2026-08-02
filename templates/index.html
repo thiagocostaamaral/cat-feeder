@@ -18,6 +18,7 @@
             <button class="tab" onclick="switchTab('presence')">Presence</button>
             <button class="tab" onclick="switchTab('system')">System</button>
             <button class="tab" onclick="switchTab('schedule')">Schedule</button>
+            <button class="tab" onclick="switchTab('photos')">Photos</button>
         </div>
 
         <div id="tab-feeder" class="tab-content active">
@@ -100,6 +101,10 @@
                 <button class="btn btn-add" onclick="addSchedule()">+</button>
             </div>
             <div id="schedule-list" class="schedule-list"></div>
+        </div>
+
+        <div id="tab-photos" class="tab-content">
+            <div id="photos-grid" class="photos-grid"></div>
         </div>
     </div>
 

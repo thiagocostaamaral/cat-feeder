@@ -16,9 +16,8 @@ if (Test-Path $credFile) {
     }
 }
 
-$excludeDirs = ".git", "__pycache__", ".venv", "venv", "node_modules", "helper"
+$excludeDirs = ".git", "__pycache__", ".venv", "venv", "node_modules", "helper", "Photos"
 $excludeFiles = "*.pyc", "credentials*", "INSTRUCTIONS.md", "schedules.json"
-$excludeFiles = "*.pyc", "credentials*"
 
 Write-Host "Stopping ${ServiceName} service on ${PiUser}@${PiHost} ..."
 ssh "${PiUser}@${PiHost}" "sudo systemctl stop ${ServiceName}"

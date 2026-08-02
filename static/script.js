@@ -56,6 +56,7 @@ function switchTab(name) {
     if (name === "presence") startPresencePolling();
     if (name === "system") startSystemPolling();
     if (name === "schedule") fetchSchedules();
+    if (name === "photos") fetchPhotos();
 }
 
 function startPresencePolling() {
@@ -200,5 +201,38 @@ async function removeSchedule(id) {
     try {
         await fetch(`/schedule/${id}`, { method: "DELETE" });
         fetchSchedules();
+    } catch {}
+}
+
+async function fetchPhotos() {
+    try {
+        const response = await fetch("/photos");
+        renderPhotos(await response.json());
+    } catch {}
+}
+
+function renderPhotos(photos) {
+    const grid = document.getElementById("photos-grid");
+    if (!photos.length) {
+        grid.innerHTML = '<div class="stat-row"><span style="color:rgba(255,255,255,0.3);font-size:14px;width:100%;text-align:center">No photos yet</span></div>';
+        return;
+    }
+    grid.innerHTML = photos.map(p => {
+        const displayName = p.name.replace(".jpg", "").replace(/_/g, ":");
+        const timeLabel = displayName.slice(9, 11) + ":" + displayName.slice(11, 13) + ":" + displayName.slice(13, 15);
+        return `
+            <div class="photo-card">
+                <img src="${p.url}" loading="lazy">
+                <span class="photo-time">${timeLabel}</span>
+                <button class="photo-del" onclick="removePhoto('${p.name}')">✕</button>
+            </div>
+        `;
+    }).join("");
+}
+
+async function removePhoto(name) {
+    try {
+        await fetch(`/photos/${name}`, { method: "DELETE" });
+        fetchPhotos();
     } catch {}
 }
