@@ -309,3 +309,100 @@ h1 {
 .bar-fill.ram {
     background: #8b5cf6;
 }
+
+.schedule-add {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.time-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px;
+    outline: none;
+    font-family: inherit;
+}
+
+.time-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+.rot-input {
+    width: 58px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 8px;
+    text-align: center;
+    outline: none;
+}
+
+.btn-add {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+.btn-add:active {
+    transform: scale(0.95);
+}
+
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.schedule-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.schedule-time {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.schedule-rot {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    margin-left: auto;
+}
+
+.btn-del {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.btn-del:hover {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
+}

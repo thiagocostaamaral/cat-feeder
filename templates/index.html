@@ -17,6 +17,7 @@
             <button class="tab active" onclick="switchTab('feeder')">Feeder</button>
             <button class="tab" onclick="switchTab('presence')">Presence</button>
             <button class="tab" onclick="switchTab('system')">System</button>
+            <button class="tab" onclick="switchTab('schedule')">Schedule</button>
         </div>
 
         <div id="tab-feeder" class="tab-content active">
@@ -82,9 +83,23 @@
             </div>
 
             <div class="stat-row">
+                <span class="stat-label">Time</span>
+                <span id="time-text" class="stat-value" style="flex:1;text-align:right">—</span>
+            </div>
+
+            <div class="stat-row">
                 <span class="stat-label">Uptime</span>
                 <span id="uptime-text" class="stat-value" style="flex:1;text-align:right">—</span>
             </div>
+        </div>
+
+        <div id="tab-schedule" class="tab-content">
+            <div class="schedule-add">
+                <input id="schedule-time" type="time" class="time-input" value="08:00">
+                <input id="schedule-rotation" type="number" value="50" min="1" class="rot-input">
+                <button class="btn btn-add" onclick="addSchedule()">+</button>
+            </div>
+            <div id="schedule-list" class="schedule-list"></div>
         </div>
     </div>
 

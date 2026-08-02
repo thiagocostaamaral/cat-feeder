@@ -62,5 +62,6 @@ def get_stats():
         "cpu_percent": _cpu_percent(),
         "ram": _ram(),
         "temperature_c": _temperature(),
-        "uptime": _uptime()
+        "uptime": _uptime(),
+        "time": time.strftime("%H:%M:%S")
     }

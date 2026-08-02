@@ -55,6 +55,7 @@ function switchTab(name) {
 
     if (name === "presence") startPresencePolling();
     if (name === "system") startSystemPolling();
+    if (name === "schedule") fetchSchedules();
 }
 
 function startPresencePolling() {
@@ -154,5 +155,50 @@ function updateSystemUI(data) {
     const temp = data.temperature_c;
     document.getElementById("temp-text").textContent = temp != null ? temp + "°C" : "—";
 
+    document.getElementById("time-text").textContent = data.time;
+
     document.getElementById("uptime-text").textContent = data.uptime;
+}
+
+async function fetchSchedules() {
+    try {
+        const response = await fetch("/schedule");
+        renderSchedules(await response.json());
+    } catch {}
+}
+
+function renderSchedules(schedules) {
+    const list = document.getElementById("schedule-list");
+    if (!schedules.length) {
+        list.innerHTML = '<div class="stat-row"><span style="color:rgba(255,255,255,0.3);font-size:14px;width:100%;text-align:center">No schedules</span></div>';
+        return;
+    }
+    list.innerHTML = schedules.map(s => `
+        <div class="schedule-item">
+            <span class="schedule-time">${s.time}</span>
+            <span class="schedule-rot">${s.rotation} steps</span>
+            <button class="btn-del" onclick="removeSchedule('${s.id}')">✕</button>
+        </div>
+    `).join("");
+}
+
+async function addSchedule() {
+    const time = document.getElementById("schedule-time").value;
+    const rotation = parseInt(document.getElementById("schedule-rotation").value);
+    if (!time) return;
+    try {
+        await fetch("/schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ time, rotation })
+        });
+        fetchSchedules();
+    } catch {}
+}
+
+async function removeSchedule(id) {
+    try {
+        await fetch(`/schedule/${id}`, { method: "DELETE" });
+        fetchSchedules();
+    } catch {}
 }

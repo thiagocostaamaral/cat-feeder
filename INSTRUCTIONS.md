@@ -17,6 +17,7 @@ cat-feeder/
 ├── motor.py            # StepperMotor class (lgpio)
 ├── presence.py         # PresenceSensor class (MH-SR602 PIR, lgpio)
 ├── system.py           # System stats (CPU, RAM, temp, uptime from /proc)
+├── scheduler.py        # Feeding schedule (background thread, JSON storage)
 ├── config.py           # Configuration (pins: MOTOR_PINS, PIR_PIN)
 ├── requirements.txt    # Python dependencies
 ├── templates/
@@ -34,16 +35,20 @@ cat-feeder/
 ## API Endpoints
 | Method | Route           | Body              | Response                                      |
 |--------|-----------------|-------------------|-----------------------------------------------|
-| GET    | `/`             | —                 | HTML page (three tabs: Feeder, Presence, System) |
+| GET    | `/`             | —                 | HTML page (four tabs: Feeder, Presence, System, Schedule) |
 | POST   | `/motor/open`   | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/close`  | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/rotate` | `{"rotation": N}` | `{"status":"ok","rotation":N}`                |
 | GET    | `/presence`     | —                 | `{"current":bool,"samples":[0,1,0,...]}`      |
 | GET    | `/status`       | —                 | `{"cpu_percent":N,"ram":{...},"temperature_c":N,"uptime":"..."}` |
+| GET    | `/schedule`     | —                 | `[{id,time,rotation},...]`                    |
+| POST   | `/schedule`     | `{"time":"08:00","rotation":50}` | `{id,time,rotation}`               |
+| DELETE | `/schedule/<id>`| —                 | `{"status":"ok"}`                             |
 
 Open = 512 steps, Close = -512 steps.
-Presence samples = rolling last 120 seconds (1 sample/sec). `current` is the live PIR state.
+Presence samples = rolling last 120 seconds (1 sample/sec).
 Status = live CPU/RAM/temp/uptime from /proc (100ms sample for CPU).
+Schedule = stored in `schedules.json`, background thread checks every 5s and fires motor at matching HH:MM.
 
 ## Raspberry Pi Connection
 - **Hostname:** `RaspberryThiago`
