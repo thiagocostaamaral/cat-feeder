@@ -34,7 +34,7 @@ class PresenceSensor:
             try:
                 value = gpio.gpio_read(self.handle, self.pin)
                 new_state = bool(value)
-                if new_state and not self.current and self._on_detect:
+                if new_state and self._on_detect:
                     self._on_detect()
                 self.current = new_state
                 self.samples.append(1 if value else 0)
