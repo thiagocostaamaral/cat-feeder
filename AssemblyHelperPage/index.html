@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cat Feeder — Assembly Helper</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --panel: #27293d;
+      --text: #e4e4f0;
+      --muted: #9a9ab0;
+      --board: #1b5e20;
+      --board-2: #2e7d32;
+      --gold: #c9a227;
+      --3v3: #e0a33a;
+      --5v: #d95555;
+      --gnd: #5a5a6e;
+      --gpio: #3fa06b;
+      --used: #4f7de0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      margin: 0 0 4px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin: 0 0 16px;
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      margin: 0 0 10px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: #3d4264;
+      color: #ffffff;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .board-wrap {
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+    }
+
+    .board-wrap svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .board-wrap img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 4px 0 12px;
+    }
+
+    .legend .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .legend .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .header-scroll {
+      overflow-x: auto;
+      padding: 4px 2px 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .pin-grid {
+      display: grid;
+      grid-template-columns: repeat(20, 48px);
+      gap: 4px;
+      min-width: max-content;
+    }
+
+    .pin {
+      border-radius: 8px;
+      padding: 6px 4px;
+      text-align: center;
+      background: var(--gnd);
+      font-size: 0.7rem;
+      min-height: 52px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .pin .num {
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    .pin .fn {
+      font-size: 0.6rem;
+      opacity: 0.9;
+      word-break: break-word;
+    }
+
+    .pin .role {
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .pin.t-3v3  { background: var(--3v3); color: #2a1a00; }
+    .pin.t-5v   { background: var(--5v);  color: #2a0a0a; }
+    .pin.t-gnd  { background: var(--gnd); color: #cdcddd; }
+    .pin.t-gpio { background: var(--gpio); color: #06270f; }
+    .pin.used    { background: var(--used); color: #ffffff; }
+    .pin.used .num { color: #ffffff; }
+
+    .row-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin: 6px 0 2px;
+      white-space: nowrap;
+    }
+
+    .conn-group {
+      margin-bottom: 14px;
+    }
+
+    .conn-group h3 {
+      font-size: 0.88rem;
+      margin: 0 0 6px;
+      color: var(--text);
+    }
+
+    .conn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      background: rgba(0, 0, 0, 0.18);
+      border-radius: 8px;
+    }
+
+    .conn .src {
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+
+    .conn .dst {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex: none;
+    }
+
+    .dot.t-3v3  { background: var(--3v3); }
+    .dot.t-5v   { background: var(--5v); }
+    .dot.t-gnd  { background: var(--gnd); }
+    .dot.t-gpio { background: var(--gpio); }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-top: 10px;
+    }
+
+    code {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cat Feeder — Assembly Helper</h1>
+  <p class="subtitle">Raspberry Pi 3 Model B · 40-pin header reference (header at the bottom)</p>
+
+  <section class="card">
+    <h2>Board layout</h2>
+    <div class="tabs">
+      <button class="tab active" data-tab="sketch">Sketch</button>
+      <button class="tab" data-tab="image">Example image</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-sketch">
+      <div class="board-wrap">
+        <svg viewBox="0 0 820 580" width="820" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Raspberry Pi 3B board layout with GPIO header at the bottom">
+          <!-- board -->
+          <rect x="40" y="70" width="740" height="420" rx="18" fill="#3d6b35" stroke="#2b4f26" stroke-width="3"/>
+          <rect x="40" y="70" width="740" height="420" rx="18" fill="none" stroke="#5a8f52" stroke-width="1" opacity="0.5"/>
+
+          <!-- GPIO header (2x20) at the bottom -->
+          <rect x="180" y="488" width="460" height="52" rx="6" fill="#111" stroke="#333" stroke-width="2"/>
+          <g fill="#e8c84a">
+            <g>
+              <circle cx="200" cy="504" r="5"/><circle cx="222" cy="504" r="5"/><circle cx="244" cy="504" r="5"/>
+              <circle cx="266" cy="504" r="5"/><circle cx="288" cy="504" r="5"/><circle cx="310" cy="504" r="5"/>
+              <circle cx="332" cy="504" r="5"/><circle cx="354" cy="504" r="5"/><circle cx="376" cy="504" r="5"/>
+              <circle cx="398" cy="504" r="5"/><circle cx="420" cy="504" r="5"/><circle cx="442" cy="504" r="5"/>
+              <circle cx="464" cy="504" r="5"/><circle cx="486" cy="504" r="5"/><circle cx="508" cy="504" r="5"/>
+              <circle cx="530" cy="504" r="5"/><circle cx="552" cy="504" r="5"/><circle cx="574" cy="504" r="5"/>
+              <circle cx="596" cy="504" r="5"/><circle cx="618" cy="504" r="5"/>
+            </g>
+            <g>
+              <circle cx="200" cy="526" r="5"/><circle cx="222" cy="526" r="5"/><circle cx="244" cy="526" r="5"/>
+              <circle cx="266" cy="526" r="5"/><circle cx="288" cy="526" r="5"/><circle cx="310" cy="526" r="5"/>
+              <circle cx="332" cy="526" r="5"/><circle cx="354" cy="526" r="5"/><circle cx="376" cy="526" r="5"/>
+              <circle cx="398" cy="526" r="5"/><circle cx="420" cy="526" r="5"/><circle cx="442" cy="526" r="5"/>
+              <circle cx="464" cy="526" r="5"/><circle cx="486" cy="526" r="5"/><circle cx="508" cy="526" r="5"/>
+              <circle cx="530" cy="526" r="5"/><circle cx="552" cy="526" r="5"/><circle cx="574" cy="526" r="5"/>
+              <circle cx="596" cy="526" r="5"/><circle cx="618" cy="526" r="5"/>
+            </g>
+          </g>
+          <text x="410" y="478" font-size="12" fill="#e8c84a" font-family="monospace" text-anchor="middle">GPIO header</text>
+
+          <!-- microSD (top) -->
+          <rect x="180" y="36" width="90" height="24" rx="4" fill="#1f1f28" stroke="#555" stroke-width="2"/>
+          <text x="176" y="80" font-size="10" fill="#cfe3cd" font-family="monospace">microSD</text>
+
+          <!-- USB ports (left) -->
+          <rect x="30" y="150" width="26" height="28" rx="4" fill="#cfd4dd" stroke="#9aa1ad" stroke-width="2"/>
+          <rect x="30" y="188" width="26" height="28" rx="4" fill="#cfd4dd" stroke="#9aa1ad" stroke-width="2"/>
+          <rect x="30" y="226" width="26" height="28" rx="4" fill="#cfd4dd" stroke="#9aa1ad" stroke-width="2"/>
+          <rect x="30" y="264" width="26" height="28" rx="4" fill="#cfd4dd" stroke="#9aa1ad" stroke-width="2"/>
+          <text x="16" y="144" font-size="10" fill="#cfe3cd" font-family="monospace">USB</text>
+
+          <!-- Ethernet (left lower) -->
+          <rect x="30" y="330" width="26" height="60" rx="5" fill="#3a3a44" stroke="#8a8a96" stroke-width="2"/>
+          <text x="14" y="324" font-size="10" fill="#cfe3cd" font-family="monospace">Ethernet</text>
+
+          <!-- CSI (camera) -->
+          <rect x="320" y="150" width="60" height="14" rx="3" fill="#222" stroke="#444" stroke-width="2"/>
+          <text x="300" y="182" font-size="10" fill="#cfe3cd" font-family="monospace">CSI (camera)</text>
+
+          <!-- DSI (display) -->
+          <rect x="320" y="190" width="60" height="14" rx="3" fill="#222" stroke="#444" stroke-width="2"/>
+          <text x="300" y="222" font-size="10" fill="#cfe3cd" font-family="monospace">DSI (display)</text>
+
+          <!-- SoC -->
+          <rect x="220" y="260" width="90" height="90" rx="6" fill="#20262b" stroke="#444c52" stroke-width="2"/>
+          <text x="247" y="310" font-size="11" fill="#9aa7ad" font-family="monospace">SoC</text>
+
+          <!-- status LEDs -->
+          <circle cx="70" cy="420" r="5" fill="#d95555"/><circle cx="88" cy="420" r="5" fill="#3fa06b"/>
+          <text x="56" y="444" font-size="9" fill="#cfe3cd" font-family="monospace">LEDs</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="panel-image">
+      <div class="board-wrap">
+        <img src="PinsExample.png" alt="Example pin reference">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>GPIO header (40 pins)</h2>
+    <div class="tabs">
+      <button class="tab active" data-tab="general">General info</button>
+      <button class="tab" data-tab="connections">Connections</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-general">
+      <div class="legend">
+        <span class="chip"><span class="swatch" style="background:var(--3v3)"></span>3.3V</span>
+        <span class="chip"><span class="swatch" style="background:var(--5v)"></span>5V</span>
+        <span class="chip"><span class="swatch" style="background:var(--gnd)"></span>Ground</span>
+        <span class="chip"><span class="swatch" style="background:var(--gpio)"></span>GPIO</span>
+      </div>
+
+      <div class="row-label">Row A — odd pins (39, 37, 35, …, 1)</div>
+      <div class="header-scroll">
+        <div class="pin-grid" id="row-odd-general"></div>
+      </div>
+      <div class="row-label">Row B — even pins (40, 38, 36, …, 2)</div>
+      <div class="header-scroll">
+        <div class="pin-grid" id="row-even-general"></div>
+      </div>
+
+      <p class="note">Pin numbering is the physical pin number on the header. The <code>GPIO#</code> label is the Broadcom (BCM) number used in software.</p>
+    </div>
+
+    <div class="tab-panel" id="panel-connections">
+      <div class="legend">
+        <span class="chip"><span class="swatch" style="background:var(--3v3)"></span>3.3V</span>
+        <span class="chip"><span class="swatch" style="background:var(--5v)"></span>5V</span>
+        <span class="chip"><span class="swatch" style="background:var(--gnd)"></span>Ground</span>
+        <span class="chip"><span class="swatch" style="background:var(--gpio)"></span>GPIO</span>
+        <span class="chip"><span class="swatch" style="background:var(--used)"></span>Used in this project</span>
+      </div>
+
+      <div class="row-label">Row A — odd pins (39, 37, 35, …, 1)</div>
+      <div class="header-scroll">
+        <div class="pin-grid" id="row-odd-conn"></div>
+      </div>
+      <div class="row-label">Row B — even pins (40, 38, 36, …, 2)</div>
+      <div class="header-scroll">
+        <div class="pin-grid" id="row-even-conn"></div>
+      </div>
+
+      <p class="note">Pins used by this project. PIR VCC is 3.3V (pin 17); verify it matches your sensor.</p>
+    </div>
+  </section>
+
+  <script>
+    const PINS = {
+      1:  { fn: "3.3V",          type: "3v3" },
+      2:  { fn: "5V",            type: "5v", role: "Pi 5V" },
+      3:  { fn: "GPIO2 (SDA1)",  type: "gpio" },
+      4:  { fn: "5V",            type: "5v" },
+      5:  { fn: "GPIO3 (SCL1)",  type: "gpio" },
+      6:  { fn: "GND",           type: "gnd", role: "Pi GND" },
+      7:  { fn: "GPIO4",         type: "gpio" },
+      8:  { fn: "GPIO14 (TXD)",  type: "gpio" },
+      9:  { fn: "GND",           type: "gnd", role: "PIR GND" },
+      10: { fn: "GPIO15 (RXD)",  type: "gpio" },
+      11: { fn: "GPIO17",        type: "gpio", role: "IN1" },
+      12: { fn: "GPIO18",        type: "gpio", role: "IN2" },
+      13: { fn: "GPIO27",        type: "gpio", role: "IN3" },
+      14: { fn: "GND",           type: "gnd" },
+      15: { fn: "GPIO22",        type: "gpio", role: "IN4" },
+      16: { fn: "GPIO23",        type: "gpio", role: "PIR" },
+      17: { fn: "3.3V",          type: "3v3", role: "PIR VCC" },
+      18: { fn: "GPIO24",        type: "gpio" },
+      19: { fn: "GPIO10 (MOSI)", type: "gpio" },
+      20: { fn: "GND",           type: "gnd" },
+      21: { fn: "GPIO9 (MISO)",  type: "gpio" },
+      22: { fn: "GPIO25",        type: "gpio" },
+      23: { fn: "GPIO11 (SCLK)", type: "gpio" },
+      24: { fn: "GPIO8 (CE0)",   type: "gpio" },
+      25: { fn: "GND",           type: "gnd" },
+      26: { fn: "GPIO7 (CE1)",   type: "gpio" },
+      27: { fn: "GPIO0 (ID_SD)", type: "gpio" },
+      28: { fn: "GPIO1 (ID_SC)", type: "gpio" },
+      29: { fn: "GPIO5",         type: "gpio" },
+      30: { fn: "GND",           type: "gnd" },
+      31: { fn: "GPIO6",         type: "gpio" },
+      32: { fn: "GPIO12",        type: "gpio" },
+      33: { fn: "GPIO13",        type: "gpio" },
+      34: { fn: "GND",           type: "gnd" },
+      35: { fn: "GPIO19 (MISO)", type: "gpio" },
+      36: { fn: "GPIO16",        type: "gpio" },
+      37: { fn: "GPIO26",        type: "gpio" },
+      38: { fn: "GPIO20 (MOSI)", type: "gpio" },
+      39: { fn: "GND",           type: "gnd" },
+      40: { fn: "GPIO21 (SCLK)", type: "gpio" }
+    };
+
+    function renderRow(rowEl, nums, withRoles) {
+      rowEl.innerHTML = "";
+      nums.forEach(n => {
+        const p = PINS[n];
+        const hasRole = withRoles && p.role;
+        const cell = document.createElement("div");
+        cell.className = "pin t-" + p.type + (hasRole ? " used" : "");
+        cell.innerHTML =
+          '<span class="num">' + n + '</span>' +
+          '<span class="fn">' + p.fn + '</span>' +
+          (hasRole ? '<span class="role">' + p.role + '</span>' : "");
+        rowEl.appendChild(cell);
+      });
+    }
+
+    const odd = [], even = [];
+    for (let n = 1; n <= 40; n++) {
+      (n % 2 === 1 ? odd : even).push(n);
+    }
+    odd.reverse();
+    even.reverse();
+
+    renderRow(document.getElementById("row-odd-general"), odd, false);
+    renderRow(document.getElementById("row-even-general"), even, false);
+    renderRow(document.getElementById("row-odd-conn"), odd, true);
+    renderRow(document.getElementById("row-even-conn"), even, true);
+
+    document.querySelectorAll(".tabs").forEach(group => {
+      group.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          group.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+          tab.classList.add("active");
+          const card = group.closest(".card");
+          card.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+          card.querySelector("#panel-" + tab.dataset.tab).classList.add("active");
+        });
+      });
+    });
+
+
+  </script>
+</body>
+</html>
