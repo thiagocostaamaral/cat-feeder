@@ -57,7 +57,7 @@ def delete_photo(name):
 
 
 class CameraTrigger:
-    def __init__(self, cooldown=10):
+    def __init__(self, cooldown=2):
         self._cooldown = cooldown
         self._last_capture = 0
         self._lock = threading.Lock()
