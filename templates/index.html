@@ -22,6 +22,11 @@
         </div>
 
         <div id="tab-feeder" class="tab-content active">
+            <div class="motor-select">
+                <button class="m-btn active" data-motor="1" onclick="selectMotor(1)">Motor 1</button>
+                <button class="m-btn" data-motor="2" onclick="selectMotor(2)">Motor 2</button>
+            </div>
+
             <div class="controls">
                 <div class="input-group">
                     <label for="rotation">Steps</label>
@@ -43,7 +48,7 @@
                 </div>
             </div>
 
-            <div id="motor-status" class="status idle">Ready</div>
+            <div id="motor-status" class="status idle">Motor 1 · Ready</div>
         </div>
 
         <div id="tab-presence" class="tab-content">

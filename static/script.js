@@ -1,45 +1,73 @@
 const statusEl = document.getElementById("motor-status");
 let presenceInterval = null;
 let systemInterval = null;
+let selectedMotor = 1;
+let motorRunning = false;
 
 function setStatus(text, type) {
     statusEl.textContent = text;
     statusEl.className = "status " + type;
 }
 
+function motorBase(prefix) {
+    return selectedMotor === 2 ? prefix.replace("/motor", "/motor2") : prefix;
+}
+
+function selectMotor(n) {
+    if (motorRunning) return;
+    selectedMotor = n;
+    document.querySelectorAll(".m-btn").forEach(b => {
+        const active = parseInt(b.dataset.motor) === n;
+        b.classList.toggle("active", active);
+    });
+    setStatus(`Motor ${n} · Ready`, "idle");
+}
+
 async function openMotor() {
-    setStatus("Opening...", "loading");
+    if (motorRunning) return;
+    motorRunning = true;
+    setStatus(`Motor ${selectedMotor} · Opening...`, "loading");
     try {
-        await fetch("/motor/open", { method: "POST" });
-        setStatus("Opened", "success");
+        await fetch(motorBase("/motor/open"), { method: "POST" });
+        setStatus(`Motor ${selectedMotor} · Opened`, "success");
     } catch {
-        setStatus("Failed to open", "error");
+        setStatus(`Failed to open motor ${selectedMotor}`, "error");
+    } finally {
+        motorRunning = false;
     }
 }
 
 async function closeMotor() {
-    setStatus("Closing...", "loading");
+    if (motorRunning) return;
+    motorRunning = true;
+    setStatus(`Motor ${selectedMotor} · Closing...`, "loading");
     try {
-        await fetch("/motor/close", { method: "POST" });
-        setStatus("Closed", "success");
+        await fetch(motorBase("/motor/close"), { method: "POST" });
+        setStatus(`Motor ${selectedMotor} · Closed`, "success");
     } catch {
-        setStatus("Failed to close", "error");
+        setStatus(`Failed to close motor ${selectedMotor}`, "error");
+    } finally {
+        motorRunning = false;
     }
 }
 
 async function rotateMotor() {
+    if (motorRunning) return;
+    motorRunning = true;
     const rotation = parseInt(document.getElementById("rotation").value);
-    setStatus(`Rotating ${rotation} steps...`, "loading");
+    setStatus(`Motor ${selectedMotor} · Rotating ${rotation} steps...`, "loading");
     try {
-        const response = await fetch("/motor/rotate", {
+        const response = await fetch(motorBase("/motor/rotate"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ rotation })
         });
         const result = await response.json();
-        setStatus(`Moved ${result.rotation} steps`, "success");
+        setStatus(`Motor ${selectedMotor} · Moved ${result.rotation} steps`, "success");
     } catch {
-        setStatus("Failed to rotate", "error");
+        setStatus(`Failed to rotate motor ${selectedMotor}`, "error");
+    } finally {
+        motorRunning = false;
     }
 }
 

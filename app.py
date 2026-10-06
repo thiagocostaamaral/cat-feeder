@@ -9,7 +9,8 @@ import os
 
 app = Flask(__name__)
 motor = StepperMotor(pins=config.MOTOR_PINS)
-camera = CameraTrigger()
+motor2 = StepperMotor(pins=config.MOTOR2_PINS)
+camera = CameraTrigger(cooldown=60)
 presence = PresenceSensor(pin=config.PIR_PIN, on_detect=camera.on_detect)
 scheduler = Scheduler()
 scheduler.set_motor(motor)
@@ -30,6 +31,23 @@ def rotate_motor():
     data = request.get_json()
     rotation = int(data["rotation"])
     motor.rotate(rotation)
+    return jsonify({"status":"ok","rotation":rotation})
+
+@app.post("/motor2/open")
+def open_motor2():
+    motor2.rotate(512)
+    return jsonify({"status":"ok"})
+
+@app.post("/motor2/close")
+def close_motor2():
+    motor2.rotate(-512)
+    return jsonify({"status":"ok"})
+
+@app.post("/motor2/rotate")
+def rotate_motor2():
+    data = request.get_json()
+    rotation = int(data["rotation"])
+    motor2.rotate(rotation)
     return jsonify({"status":"ok","rotation":rotation})
 
 @app.get("/presence")

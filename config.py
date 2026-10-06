@@ -1,2 +1,3 @@
 MOTOR_PINS = [17, 18, 27, 22]
+MOTOR2_PINS = [5, 6, 13, 19]
 PIR_PIN = 23

@@ -19,7 +19,7 @@ cat-feeder/
 ├── system.py           # System stats (CPU, RAM, temp, uptime from /proc)
 ├── scheduler.py        # Feeding schedule (background thread, JSON storage)
 ├── camera.py           # OV5647 camera capture (rpicam-still), PhotoTrigger
-├── config.py           # Configuration (pins: MOTOR_PINS, PIR_PIN)
+├── config.py           # Configuration (pins: MOTOR_PINS, MOTOR2_PINS, PIR_PIN)
 ├── requirements.txt    # Python dependencies
 ├── templates/
 │   └── index.html      # Web UI
@@ -40,6 +40,9 @@ cat-feeder/
 | POST   | `/motor/open`   | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/close`  | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/rotate` | `{"rotation": N}` | `{"status":"ok","rotation":N}`                |
+| POST   | `/motor2/open`  | —                 | `{"status":"ok"}`                             |
+| POST   | `/motor2/close` | —                 | `{"status":"ok"}`                             |
+| POST   | `/motor2/rotate`| `{"rotation": N}` | `{"status":"ok","rotation":N}`                |
 | GET    | `/presence`     | —                 | `{"current":bool,"samples":[0,1,0,...]}`      |
 | GET    | `/status`       | —                 | `{"cpu_percent":N,"ram":{...},"temperature_c":N,"uptime":"...","time":"HH:MM:SS"}` |
 | GET    | `/schedule`     | —                 | `[{id,time,rotation},...]`                    |
@@ -50,7 +53,8 @@ cat-feeder/
 | DELETE | `/photos/<name>`| —                 | `{"status":"ok"}`                             |
 
 Open = 512 steps, Close = -512 steps.
-Presence samples = rolling last 120 seconds (1 sample/sec). Motion triggers camera (10s cooldown).
+Motor 1 dispensing pins = BCM [17,18,27,22] (physical 11,12,13,15). Motor 2 = BCM [5,6,13,19] (physical 29,31,33,35, at the far right edge of the header).
+Presence samples = rolling last 120 seconds (1 sample/sec). Motion triggers camera (60s cooldown).
 Status = live CPU/RAM/temp/uptime/time from /proc (100ms sample for CPU).
 Schedule = stored in `schedules.json`, background thread checks every 5s and fires motor at matching HH:MM.
 Photos = stored in `Photos/` directory, captured by OV5647 via rpicam-still when PIR detects motion.
@@ -89,3 +93,4 @@ sudo journalctl -u cat-feeder -f   # Follow logs
 - `deploy.ps1` handles service restart automatically
 - Pi runs Flask on all interfaces (`host="::"`) port 5000
 - MH-SR602 PIR sensor wired to GPIO pin 23 (configurable in `config.py` → `PIR_PIN`)
+- Second stepper motor (`MOTOR2_PINS`) controlled via `/motor2/*` endpoints and the Motor 1/2 toggle on the Feeder tab

@@ -81,6 +81,37 @@ h1 {
     gap: 12px;
 }
 
+.motor-select {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.m-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    padding: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.m-btn.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.m-btn:hover:not(.active) {
+    color: rgba(255, 255, 255, 0.7);
+}
+
 .input-group {
     display: flex;
     align-items: center;

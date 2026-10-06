@@ -373,7 +373,7 @@
         <div class="pin-grid" id="row-even-conn"></div>
       </div>
 
-      <p class="note">Pins used by this project. PIR VCC is 3.3V (pin 17); verify it matches your sensor.</p>
+      <p class="note">Pins used by this project. Motor 1 (dispensing) lives on the left: IN1-IN4 → pins 11/12/13/15. Motor 2 sits at the far right edge: IN1-IN4 → pins 29/31/33/35. PIR VCC is 3.3V (pin 17); verify it matches your sensor.</p>
     </div>
   </section>
 
@@ -389,11 +389,11 @@
       8:  { fn: "GPIO14 (TXD)",  type: "gpio" },
       9:  { fn: "GND",           type: "gnd", role: "PIR GND" },
       10: { fn: "GPIO15 (RXD)",  type: "gpio" },
-      11: { fn: "GPIO17",        type: "gpio", role: "IN1" },
-      12: { fn: "GPIO18",        type: "gpio", role: "IN2" },
-      13: { fn: "GPIO27",        type: "gpio", role: "IN3" },
+      11: { fn: "GPIO17",        type: "gpio", role: "M1 IN1" },
+      12: { fn: "GPIO18",        type: "gpio", role: "M1 IN2" },
+      13: { fn: "GPIO27",        type: "gpio", role: "M1 IN3" },
       14: { fn: "GND",           type: "gnd" },
-      15: { fn: "GPIO22",        type: "gpio", role: "IN4" },
+      15: { fn: "GPIO22",        type: "gpio", role: "M1 IN4" },
       16: { fn: "GPIO23",        type: "gpio", role: "PIR" },
       17: { fn: "3.3V",          type: "3v3", role: "PIR VCC" },
       18: { fn: "GPIO24",        type: "gpio" },
@@ -407,13 +407,13 @@
       26: { fn: "GPIO7 (CE1)",   type: "gpio" },
       27: { fn: "GPIO0 (ID_SD)", type: "gpio" },
       28: { fn: "GPIO1 (ID_SC)", type: "gpio" },
-      29: { fn: "GPIO5",         type: "gpio" },
+      29: { fn: "GPIO5",         type: "gpio", role: "M2 IN1" },
       30: { fn: "GND",           type: "gnd" },
-      31: { fn: "GPIO6",         type: "gpio" },
+      31: { fn: "GPIO6",         type: "gpio", role: "M2 IN2" },
       32: { fn: "GPIO12",        type: "gpio" },
-      33: { fn: "GPIO13",        type: "gpio" },
+      33: { fn: "GPIO13",        type: "gpio", role: "M2 IN3" },
       34: { fn: "GND",           type: "gnd" },
-      35: { fn: "GPIO19 (MISO)", type: "gpio" },
+      35: { fn: "GPIO19 (MISO)", type: "gpio", role: "M2 IN4" },
       36: { fn: "GPIO16",        type: "gpio" },
       37: { fn: "GPIO26",        type: "gpio" },
       38: { fn: "GPIO20 (MOSI)", type: "gpio" },
