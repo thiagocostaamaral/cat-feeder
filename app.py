@@ -4,6 +4,7 @@ from presence import PresenceSensor
 from system import get_stats
 from scheduler import Scheduler
 from camera import CameraTrigger, list_photos, delete_photo, PHOTOS_DIR
+from scale import HX711
 import config
 import os
 
@@ -15,6 +16,7 @@ presence = PresenceSensor(pin=config.PIR_PIN, on_detect=camera.on_detect)
 scheduler = Scheduler()
 scheduler.set_motor(motor)
 scheduler.start()
+scale = HX711(dt_pin=config.HX711_DT_PIN, sck_pin=config.HX711_SCK_PIN)
 
 @app.post("/motor/open")
 def open_motor():
@@ -49,6 +51,38 @@ def rotate_motor2():
     rotation = int(data["rotation"])
     motor2.rotate(rotation)
     return jsonify({"status":"ok","rotation":rotation})
+
+@app.get("/weight")
+def get_weight():
+    return jsonify(scale.get_state())
+
+@app.post("/weight/tare")
+def tare_weight():
+    offset = scale.tare()
+    if offset is None:
+        return jsonify({"status":"error","error":"scale not available"}), 503
+    return jsonify({"status":"ok","offset":offset})
+
+@app.post("/weight/calibrate")
+def calibrate_weight():
+    data = request.get_json(silent=True) or {}
+    try:
+        grams = float(data["grams"])
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"status":"error","error":"grams required"}), 400
+    try:
+        factor = scale.calibrate(grams)
+    except ValueError as exc:
+        return jsonify({"status":"error","error":str(exc)}), 400
+    if factor is None:
+        return jsonify({"status":"error","error":"scale not available"}), 503
+    return jsonify(scale.get_state())
+
+@app.post("/weight/reset")
+def reset_weight():
+    if not scale.reset():
+        return jsonify({"status":"error","error":"scale not available"}), 503
+    return jsonify({"status":"ok"})
 
 @app.get("/presence")
 def get_presence():

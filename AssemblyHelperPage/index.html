@@ -374,17 +374,18 @@
       </div>
 
       <p class="note">Pins used by this project. Motor 1 (dispensing) lives on the left: IN1-IN4 → pins 11/12/13/15. Motor 2 sits at the far right edge: IN1-IN4 → pins 29/31/33/35. PIR VCC is 3.3V (pin 17); verify it matches your sensor.</p>
+      <p class="note">HX711 (load cell amplifier) must be powered from <code>3.3V</code> (pin 1), not 5V: its DT/SCK levels follow VCC, and 5V would push ~5V into the Pi's non-5V-tolerant GPIO. VCC → pin 1, GND → pin 6, DT → GPIO24 (pin 18), SCK → GPIO25 (pin 22). Load cell to HX711: Red → E+, Black → E-, White → A-, Green → A+ (colour order varies by cell, check its datasheet).</p>
     </div>
   </section>
 
   <script>
     const PINS = {
-      1:  { fn: "3.3V",          type: "3v3" },
+      1:  { fn: "3.3V",          type: "3v3", role: "HX711 VCC" },
       2:  { fn: "5V",            type: "5v", role: "Pi 5V" },
       3:  { fn: "GPIO2 (SDA1)",  type: "gpio" },
       4:  { fn: "5V",            type: "5v" },
       5:  { fn: "GPIO3 (SCL1)",  type: "gpio" },
-      6:  { fn: "GND",           type: "gnd", role: "Pi GND" },
+      6:  { fn: "GND",           type: "gnd", role: "HX711 GND" },
       7:  { fn: "GPIO4",         type: "gpio" },
       8:  { fn: "GPIO14 (TXD)",  type: "gpio" },
       9:  { fn: "GND",           type: "gnd", role: "PIR GND" },
@@ -396,11 +397,11 @@
       15: { fn: "GPIO22",        type: "gpio", role: "M1 IN4" },
       16: { fn: "GPIO23",        type: "gpio", role: "PIR" },
       17: { fn: "3.3V",          type: "3v3", role: "PIR VCC" },
-      18: { fn: "GPIO24",        type: "gpio" },
+      18: { fn: "GPIO24",        type: "gpio", role: "HX711 DT" },
       19: { fn: "GPIO10 (MOSI)", type: "gpio" },
       20: { fn: "GND",           type: "gnd" },
       21: { fn: "GPIO9 (MISO)",  type: "gpio" },
-      22: { fn: "GPIO25",        type: "gpio" },
+      22: { fn: "GPIO25",        type: "gpio", role: "HX711 SCK" },
       23: { fn: "GPIO11 (SCLK)", type: "gpio" },
       24: { fn: "GPIO8 (CE0)",   type: "gpio" },
       25: { fn: "GND",           type: "gnd" },

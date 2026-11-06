@@ -1,6 +1,7 @@
 const statusEl = document.getElementById("motor-status");
 let presenceInterval = null;
 let systemInterval = null;
+let weightInterval = null;
 let selectedMotor = 1;
 let motorRunning = false;
 
@@ -80,9 +81,11 @@ function switchTab(name) {
 
     stopPresencePolling();
     stopSystemPolling();
+    stopWeightPolling();
 
     if (name === "presence") startPresencePolling();
     if (name === "system") startSystemPolling();
+    if (name === "weight") startWeightPolling();
     if (name === "schedule") fetchSchedules();
     if (name === "photos") fetchPhotos();
 }
@@ -263,4 +266,105 @@ async function removePhoto(name) {
         await fetch(`/photos/${name}`, { method: "DELETE" });
         fetchPhotos();
     } catch {}
+}
+
+function startWeightPolling() {
+    if (weightInterval) return;
+    fetchWeight();
+    weightInterval = setInterval(fetchWeight, 1000);
+}
+
+function stopWeightPolling() {
+    if (weightInterval) {
+        clearInterval(weightInterval);
+        weightInterval = null;
+    }
+}
+
+function setWeightStatus(text, type) {
+    const el = document.getElementById("weight-status");
+    el.textContent = text;
+    el.className = "status " + type;
+}
+
+async function fetchWeight() {
+    try {
+        const response = await fetch("/weight");
+        updateWeightUI(await response.json());
+    } catch {}
+}
+
+function updateWeightUI(data) {
+    const gramsEl = document.getElementById("weight-grams");
+    const rawEl = document.getElementById("weight-raw");
+
+    if (!data.available) {
+        gramsEl.textContent = "—";
+        rawEl.textContent = data.error || "—";
+        setWeightStatus("Scale · Not connected", "error");
+        return;
+    }
+
+    gramsEl.textContent = Math.abs(data.grams) < 0.05 ? "0.0" : data.grams.toFixed(1);
+    rawEl.textContent = data.raw + " · " + data.raw_hex;
+
+    if (!data.calibrated) {
+        setWeightStatus("Scale · Not calibrated", "loading");
+    } else if (data.stable) {
+        setWeightStatus(`Scale · ${data.grams.toFixed(1)} g · stable`, "success");
+    } else {
+        setWeightStatus(`Scale · ${data.grams.toFixed(1)} g · settling`, "idle");
+    }
+}
+
+async function resetScale() {
+    setWeightStatus("Scale · Resetting chip...", "loading");
+    try {
+        const result = await (await fetch("/weight/reset", { method: "POST" })).json();
+        if (result.status === "ok") {
+            setWeightStatus("Scale · Chip reset", "success");
+        } else {
+            setWeightStatus(`Scale · ${result.error || "reset failed"}`, "error");
+        }
+    } catch {
+        setWeightStatus("Scale · Reset failed", "error");
+    }
+    fetchWeight();
+}
+
+async function tareScale() {
+    setWeightStatus("Scale · Taring...", "loading");
+    try {
+        const result = await (await fetch("/weight/tare", { method: "POST" })).json();
+        if (result.status === "ok") {
+            setWeightStatus("Scale · Tared", "success");
+        } else {
+            setWeightStatus(`Scale · ${result.error || "tare failed"}`, "error");
+        }
+    } catch {
+        setWeightStatus("Scale · Tare failed", "error");
+    }
+    fetchWeight();
+}
+
+async function calibrateScale() {
+    const grams = parseFloat(document.getElementById("cal-grams").value);
+    if (!grams || grams <= 0) return;
+    setWeightStatus("Scale · Calibrating...", "loading");
+    try {
+        const response = await fetch("/weight/calibrate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ grams })
+        });
+        const result = await response.json();
+        if (result.calibrated) {
+            setWeightStatus(`Scale · Calibrated with ${grams} g`, "success");
+        } else {
+            setWeightStatus(`Scale · ${result.error || "calibration failed"}`, "error");
+        }
+    } catch {
+        setWeightStatus("Scale · Calibration failed", "error");
+    }
+    fetchWeight();
 }

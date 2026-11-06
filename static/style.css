@@ -38,6 +38,7 @@ h1 {
 
 .tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 0;
     margin-bottom: 24px;
     background: rgba(255, 255, 255, 0.05);
@@ -46,7 +47,7 @@ h1 {
 }
 
 .tab {
-    flex: 1;
+    flex: 1 1 30%;
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.45);
@@ -487,4 +488,30 @@ h1 {
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 5px;
+}
+
+.weight-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    margin-bottom: 12px;
+}
+
+.weight-value {
+    color: #fff;
+    font-size: 46px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.weight-unit {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 18px;
+    font-weight: 600;
 }

@@ -19,6 +19,7 @@
             <button class="tab" onclick="switchTab('system')">System</button>
             <button class="tab" onclick="switchTab('schedule')">Schedule</button>
             <button class="tab" onclick="switchTab('photos')">Photos</button>
+            <button class="tab" onclick="switchTab('weight')">Weight</button>
         </div>
 
         <div id="tab-feeder" class="tab-content active">
@@ -110,6 +111,40 @@
 
         <div id="tab-photos" class="tab-content">
             <div id="photos-grid" class="photos-grid"></div>
+        </div>
+
+        <div id="tab-weight" class="tab-content">
+            <div class="weight-display">
+                <span id="weight-grams" class="weight-value">—</span>
+                <span class="weight-unit">g</span>
+            </div>
+
+            <div id="weight-status" class="status idle">Scale · —</div>
+
+            <div class="controls">
+                <div class="input-group">
+                    <label for="cal-grams">Known weight</label>
+                    <input id="cal-grams" type="number" value="100" step="1" min="1">
+                    <span>g</span>
+                </div>
+
+                <button class="btn btn-rotate" onclick="calibrateScale()">
+                    ⚖ Calibrate
+                </button>
+
+                <button class="btn btn-open" onclick="tareScale()">
+                    ⟲ Tare (zero)
+                </button>
+
+                <button class="btn btn-open" onclick="resetScale()">
+                    ⏻ Reset chip
+                </button>
+            </div>
+
+            <div class="stat-row" style="margin-top:16px">
+                <span class="stat-label">Raw</span>
+                <span id="weight-raw" class="stat-value" style="flex:1;text-align:right">—</span>
+            </div>
         </div>
     </div>
 
