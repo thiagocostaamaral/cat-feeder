@@ -515,3 +515,165 @@ h1 {
     font-size: 18px;
     font-weight: 600;
 }
+
+a.btn {
+    color: #fff;
+    text-decoration: none;
+}
+
+.container.wide {
+    max-width: 720px;
+}
+
+.page-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    text-align: left;
+}
+
+.page-head h1 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.link-back {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.link-back:hover {
+    color: #fff;
+}
+
+.live-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.live-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.live-label {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.live-value {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.cal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.cal-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.cal-weight {
+    width: 72px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 6px 0;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.cal-unit {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+}
+
+.cal-raw {
+    margin-left: auto;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.cal-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 9px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cal-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.cal-del {
+    background: none;
+    border: none;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 15px;
+    padding: 4px 6px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+}
+
+.cal-del:hover {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.cal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.cal-actions .input-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.cal-empty {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 14px;
+    text-align: center;
+}
+
+.history-note {
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 11px;
+    text-align: center;
+    margin-top: 8px;
+}

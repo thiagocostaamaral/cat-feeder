@@ -122,29 +122,20 @@
             <div id="weight-status" class="status idle">Scale · —</div>
 
             <div class="controls">
-                <div class="input-group">
-                    <label for="cal-grams">Known weight</label>
-                    <input id="cal-grams" type="number" value="100" step="1" min="1">
-                    <span>g</span>
-                </div>
-
-                <button class="btn btn-rotate" onclick="calibrateScale()">
-                    ⚖ Calibrate
-                </button>
-
                 <button class="btn btn-open" onclick="tareScale()">
-                    ⟲ Tare (zero)
+                    ⟲ Tare
                 </button>
-
-                <button class="btn btn-open" onclick="resetScale()">
-                    ⏻ Reset chip
-                </button>
+                <a class="btn btn-rotate" href="/configure">⚙ Configure</a>
             </div>
 
-            <div class="stat-row" style="margin-top:16px">
-                <span class="stat-label">Raw</span>
-                <span id="weight-raw" class="stat-value" style="flex:1;text-align:right">—</span>
+            <div class="graph-container" style="margin-top:16px">
+                <canvas id="weight-history"></canvas>
             </div>
+            <div class="graph-labels">
+                <span id="history-range">no samples yet</span>
+                <span>now</span>
+            </div>
+            <div class="history-note">every 10 min · every 10 s while presence is detected</div>
         </div>
     </div>
 

@@ -8,6 +8,7 @@ Smart cat feeder web app running on a **Raspberry Pi**. Flask backend controls a
 - **Motor control:** `motor.py` (StepperMotor class, GPIO via lgpio)
 - **Presence sensor:** `presence.py` (MH-SR602 PIR sensor, GPIO via lgpio)
 - **Load cell:** `scale.py` (HX711 24-bit ADC, bit-banged directly over lgpio, powered from 3.3V)
+- **Weight history:** `weightlog.py` (background sampler: every 10 min, every 10 s while presence is detected)
 - **Frontend:** HTML + CSS + vanilla JS (`templates/`, `static/`)
 - **Pi service:** systemd unit at `/etc/systemd/system/cat-feeder.service`
 
@@ -20,14 +21,17 @@ cat-feeder/
 ├── system.py           # System stats (CPU, RAM, temp, uptime from /proc)
 ├── scheduler.py        # Feeding schedule (background thread, JSON storage)
 ├── camera.py           # OV5647 camera capture (rpicam-still), PhotoTrigger
-├── scale.py            # HX711 driver over lgpio (tare, calibration, scale.json)
+├── scale.py            # HX711 driver over lgpio + multi-point calibration (scale.json)
+├── weightlog.py        # Periodic weight samples -> weight_log.jsonl (10min / 10s with presence)
 ├── config.py           # Configuration (pins: MOTOR_PINS, MOTOR2_PINS, PIR_PIN, HX711 pins)
 ├── requirements.txt    # Python dependencies
 ├── templates/
-│   └── index.html      # Web UI
+│   ├── index.html      # Web UI (6 tabs)
+│   └── configure.html  # Scale calibration page (/configure)
 ├── static/
 │   ├── style.css       # Dark glassmorphism theme
-│   └── script.js       # API calls + status display
+│   ├── script.js       # API calls + status display
+│   └── configure.js    # Calibration table, capture, raw-vs-weight graph
 ├── helper/
 │   ├── deploy.ps1      # Push code to Pi (PowerShell)
 │   └── retrieve.ps1    # Pull code from Pi (PowerShell)
@@ -53,10 +57,14 @@ cat-feeder/
 | GET    | `/photos`       | —                 | `[{name,url},...]`                            |
 | GET    | `/photos/<name>`| —                 | Serves JPEG file                              |
 | DELETE | `/photos/<name>`| —                 | `{"status":"ok"}`                             |
-| GET    | `/weight`       | —                 | `{"available":bool,"calibrated":bool,"grams":N,"stable":bool,"raw":N,"offset":N,"scale":N,"samples":[...]}` |
-| POST   | `/weight/tare`  | —                 | `{"status":"ok","offset":N}`                  |
-| POST   | `/weight/calibrate` | `{"grams": N}` | scale state, or `{"status":"error","error":"..."}` |
+| GET    | `/weight`       | —                 | `{"available":bool,"calibrated":bool,"grams":N/null,"stable":bool,"raw":N,"raw_hex":"0x..","pulse_us":N,"points":[{"grams":N,"raw":N},...],"warning":str/null,"error":str|null}` |
+| POST   | `/weight/tare`  | —                 | `{"status":"ok","raw":N}` (records the 0 g point)  |
+| POST   | `/weight/capture` | —               | `{"raw":N,"grams":N/null}` (median of 16 frames)   |
+| POST   | `/calibration`  | `{"points":[{"grams":0,"raw":N},...]}` | scale state, or `{"status":"error","error":"..."}` |
 | POST   | `/weight/reset` | —                 | `{"status":"ok"}` (power-cycles the chip)      |
+| GET    | `/weight/history` | —               | `{"samples":[{"t":epoch,"g":N},...],"count":N,"idle_interval":600,"presence_interval":10,"presence":bool}` |
+| DELETE | `/weight/history` | —               | `{"status":"ok"}` (clears the log)             |
+| GET    | `/configure`    | —                 | HTML calibration page (separate from the tab UI) |
 
 Open = 512 steps, Close = -512 steps.
 Motor 1 dispensing pins = BCM [17,18,27,22] (physical 11,12,13,15). Motor 2 = BCM [5,6,13,19] (physical 29,31,33,35, at the far right edge of the header).
@@ -64,8 +72,9 @@ Presence samples = rolling last 120 seconds (1 sample/sec). Motion triggers came
 Status = live CPU/RAM/temp/uptime/time from /proc (100ms sample for CPU).
 Schedule = stored in `schedules.json`, background thread checks every 5s and fires motor at matching HH:MM.
 Photos = stored in `Photos/` directory, captured by OV5647 via rpicam-still when PIR detects motion.
-Weight = HX711 on BCM 24 (DT) / 25 (SCK), sampled ~10Hz by a background thread. grams = (raw - offset) / scale. Tare offset and calibration factor persist in `scale.json`.
-Weight workflow = tare with the bowl empty, then place a known mass and calibrate; `calibrated:false` means no factor yet.
+Weight = HX711 on BCM 24 (DT) / 25 (SCK), sampled ~10Hz by a background thread. Calibration is a table of `{grams, raw}` points persisted in `scale.json`; weight is piecewise-linear interpolation between points and linear extrapolation beyond the outer two. An inverted load cell (raw falls as weight rises) works fine — the sign comes from the measured points, not from a hardcoded offset.
+Weight workflow = the Weight tab shows the value + Tare + Configure. `/configure` is the calibration page: live raw/weight, a Capture button per point (median of 16 frames), a raw-vs-weight graph, and Save. Tare records the 0 g point. `calibrated:false` means fewer than 2 captured points.
+Weight history = `weightlog.py` appends one JSON line `{t, g}` to `weight_log.jsonl` every 600s, or every 10s while `presence.current` is true. Append-only on purpose (a full rewrite every 10s would wear the SD card). It only logs when the scale is calibrated and has no error, keeps the newest 5000 samples in memory (and rewrites the file when it passes 6000), and the Weight tab charts the last 1000 (`GET /weight/history`).
 
 ## HX711 troubleshooting
 `scale.py` surfaces the problem through `GET /weight`: `error` carries a human-readable reason and `raw` is reported in decimal and hex. The Weight tab shows both. The sensor is opened at startup, so restart the service after changing hardware. Without the web UI:
@@ -122,5 +131,5 @@ sudo journalctl -u cat-feeder -f   # Follow logs
 - MH-SR602 PIR sensor wired to GPIO pin 23 (configurable in `config.py` → `PIR_PIN`)
 - HX711 is powered from **3.3V**, never 5V: its DT/SCK levels follow VCC and would exceed the Pi's non-5V-tolerant GPIO. Pins in `config.py` → `HX711_DT_PIN`, `HX711_SCK_PIN`
 - The HX711 is clocked directly over `lgpio` with **no sleep between the PD_SCK high and low edges** (high phase must stay <60µs). Never add a `time.sleep()` there. Keep two `gpio_write` calls back-to-back.
-- `scale.py` is the only place that reads the scale; `grams = (raw - offset) / scale` with `scale.json` as the calibration store. `/weight` reports `pulse_us` (measured SCK high phase) for timing diagnosis.
+- `scale.py` is the only place that reads the scale; weight = piecewise-linear interpolation over the `{grams, raw}` points in `scale.json`. `/weight` also reports `pulse_us` (measured SCK high phase), `points` and `warning`
 - Second stepper motor (`MOTOR2_PINS`) controlled via `/motor2/*` endpoints and the Motor 1/2 toggle on the Feeder tab

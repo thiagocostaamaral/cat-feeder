@@ -2,6 +2,7 @@ const statusEl = document.getElementById("motor-status");
 let presenceInterval = null;
 let systemInterval = null;
 let weightInterval = null;
+let historyInterval = null;
 let selectedMotor = 1;
 let motorRunning = false;
 
@@ -82,10 +83,14 @@ function switchTab(name) {
     stopPresencePolling();
     stopSystemPolling();
     stopWeightPolling();
+    stopHistoryPolling();
 
     if (name === "presence") startPresencePolling();
     if (name === "system") startSystemPolling();
-    if (name === "weight") startWeightPolling();
+    if (name === "weight") {
+        startWeightPolling();
+        startHistoryPolling();
+    }
     if (name === "schedule") fetchSchedules();
     if (name === "photos") fetchPhotos();
 }
@@ -296,75 +301,150 @@ async function fetchWeight() {
 
 function updateWeightUI(data) {
     const gramsEl = document.getElementById("weight-grams");
-    const rawEl = document.getElementById("weight-raw");
 
     if (!data.available) {
         gramsEl.textContent = "—";
-        rawEl.textContent = data.error || "—";
-        setWeightStatus("Scale · Not connected", "error");
+        setWeightStatus("Scale · not connected", "error");
         return;
     }
 
-    gramsEl.textContent = Math.abs(data.grams) < 0.05 ? "0.0" : data.grams.toFixed(1);
-    rawEl.textContent = data.raw + " · " + data.raw_hex;
+    if (data.error) {
+        gramsEl.textContent = "—";
+        setWeightStatus("Scale · " + data.error, "error");
+        return;
+    }
 
     if (!data.calibrated) {
-        setWeightStatus("Scale · Not calibrated", "loading");
-    } else if (data.stable) {
-        setWeightStatus(`Scale · ${data.grams.toFixed(1)} g · stable`, "success");
-    } else {
-        setWeightStatus(`Scale · ${data.grams.toFixed(1)} g · settling`, "idle");
+        gramsEl.textContent = "—";
+        setWeightStatus("Scale · not configured", "loading");
+        return;
     }
-}
 
-async function resetScale() {
-    setWeightStatus("Scale · Resetting chip...", "loading");
-    try {
-        const result = await (await fetch("/weight/reset", { method: "POST" })).json();
-        if (result.status === "ok") {
-            setWeightStatus("Scale · Chip reset", "success");
-        } else {
-            setWeightStatus(`Scale · ${result.error || "reset failed"}`, "error");
-        }
-    } catch {
-        setWeightStatus("Scale · Reset failed", "error");
-    }
-    fetchWeight();
+    gramsEl.textContent = data.grams == null ? "—" : data.grams.toFixed(1);
+    setWeightStatus(data.stable ? "Scale · stable" : "Scale · settling",
+        data.stable ? "success" : "idle");
 }
 
 async function tareScale() {
-    setWeightStatus("Scale · Taring...", "loading");
+    setWeightStatus("Scale · taring...", "loading");
     try {
         const result = await (await fetch("/weight/tare", { method: "POST" })).json();
         if (result.status === "ok") {
-            setWeightStatus("Scale · Tared", "success");
+            setWeightStatus("Scale · tared", "success");
         } else {
-            setWeightStatus(`Scale · ${result.error || "tare failed"}`, "error");
+            setWeightStatus("Scale · " + (result.error || "tare failed"), "error");
         }
     } catch {
-        setWeightStatus("Scale · Tare failed", "error");
+        setWeightStatus("Scale · tare failed", "error");
     }
     fetchWeight();
 }
 
-async function calibrateScale() {
-    const grams = parseFloat(document.getElementById("cal-grams").value);
-    if (!grams || grams <= 0) return;
-    setWeightStatus("Scale · Calibrating...", "loading");
-    try {
-        const response = await fetch("/weight/calibrate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ grams })
-        });
-        const result = await response.json();
-        if (result.calibrated) {
-            setWeightStatus(`Scale · Calibrated with ${grams} g`, "success");
-        } else {
-            setWeightStatus(`Scale · ${result.error || "calibration failed"}`, "error");
-        }
-    } catch {
-        setWeightStatus("Scale · Calibration failed", "error");
+function startHistoryPolling() {
+    if (historyInterval) return;
+    fetchHistory();
+    historyInterval = setInterval(fetchHistory, 5000);
+}
+
+function stopHistoryPolling() {
+    if (historyInterval) {
+        clearInterval(historyInterval);
+        historyInterval = null;
     }
-    fetchWeight();
+}
+
+async function fetchHistory() {
+    try {
+        const response = await fetch("/weight/history");
+        updateHistory(await response.json());
+    } catch {}
+}
+
+function updateHistory(data) {
+    const samples = data.samples || [];
+    const range = document.getElementById("history-range");
+
+    if (!samples.length) {
+        range.textContent = "no samples yet";
+    } else {
+        const age = Date.now() / 1000 - samples[0].t;
+        range.textContent = samples.length + " samples · oldest " + formatAge(age);
+    }
+
+    drawHistory(samples, data.presence);
+}
+
+function formatAge(seconds) {
+    if (seconds < 90) return Math.round(seconds) + "s ago";
+    if (seconds < 5400) return Math.round(seconds / 60) + "m ago";
+    return (seconds / 3600).toFixed(1) + "h ago";
+}
+
+function drawHistory(samples, presence) {
+    const canvas = document.getElementById("weight-history");
+    const width = canvas.parentElement.clientWidth - 16;
+    const height = 120;
+
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    ctx.clearRect(0, 0, width, height);
+
+    if (!samples || samples.length < 2) return;
+
+    const times = samples.map(s => s.t);
+    const grams = samples.map(s => s.g);
+
+    let tMin = Math.min(...times);
+    let tMax = Math.max(...times);
+    let gMin = Math.min(...grams);
+    let gMax = Math.max(...grams);
+
+    if (tMin === tMax) {
+        tMin -= 1;
+        tMax += 1;
+    }
+    if (gMin === gMax) {
+        gMin -= 1;
+        gMax += 1;
+    }
+
+    const pad = (gMax - gMin) * 0.15;
+    gMin -= pad;
+    gMax += pad;
+
+    const x = t => 4 + (t - tMin) / (tMax - tMin) * (width - 8);
+    const y = g => height - 6 - (g - gMin) / (gMax - gMin) * (height - 12);
+
+    ctx.beginPath();
+    ctx.moveTo(x(tMin), height - 6);
+    samples.forEach(s => ctx.lineTo(x(s.t), y(s.g)));
+    ctx.lineTo(x(tMax), height - 6);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(249, 115, 22, 0.15)";
+    ctx.fill();
+
+    ctx.beginPath();
+    samples.forEach((s, i) => {
+        i === 0 ? ctx.moveTo(x(s.t), y(s.g)) : ctx.lineTo(x(s.t), y(s.g));
+    });
+    ctx.strokeStyle = "#f97316";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.font = "10px 'Segoe UI', system-ui, sans-serif";
+    ctx.fillText(gMax.toFixed(1) + " g", 6, 12);
+    ctx.fillText(gMin.toFixed(1) + " g", 6, height - 2);
+
+    if (presence) {
+        ctx.fillStyle = "rgba(74, 222, 128, 0.75)";
+        ctx.beginPath();
+        ctx.arc(width - 8, 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }

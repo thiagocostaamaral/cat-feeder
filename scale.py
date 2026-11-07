@@ -19,6 +19,7 @@ MAX_PULSE_US = 60
 GAIN_PULSES = {"A128": 1, "B32": 2, "A64": 3}
 INVALID_FRAMES = (0x000000, 0xFFFFFF, 0x7FFFFF, 0x800000)
 MAX_RETRIES = 5
+STABILITY_GRAMS = 2.0
 
 
 class HX711:
@@ -27,10 +28,9 @@ class HX711:
         self.sck_pin = sck_pin
         self.gain = gain
         self.samples = deque(maxlen=history)
+        self.points = []
         self.raw = 0
         self.weight = 0.0
-        self.scale = 0.0
-        self.offset = 0
         self.pulse_us = 0.0
         self.available = False
         self.error = None
@@ -59,19 +59,59 @@ class HX711:
         try:
             with open(SCALE_FILE) as f:
                 data = json.load(f)
-            self.offset = int(data.get("offset", 0))
-            self.scale = float(data.get("scale", 0.0))
-        except (FileNotFoundError, json.JSONDecodeError, ValueError, TypeError):
-            pass
+            points = data.get("points")
+            if isinstance(points, list):
+                self.points = [{"grams": float(p["grams"]), "raw": int(p["raw"])} for p in points]
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+            self.points = []
 
     def _save(self):
         with open(SCALE_FILE, "w") as f:
-            json.dump({"offset": self.offset, "scale": self.scale}, f, indent=2)
+            json.dump({"points": self.points}, f, indent=2)
 
     def _start(self):
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
+
+    def _sorted_points(self):
+        return sorted(self.points, key=lambda p: p["raw"])
+
+    def is_calibrated(self):
+        raw_values = [p["raw"] for p in self.points]
+        return len(raw_values) >= 2 and len(set(raw_values)) >= 2
+
+    def grams_for(self, raw):
+        points = self._sorted_points()
+        if len(points) < 2:
+            return None
+
+        segments = [(a, b) for a, b in zip(points, points[1:]) if b["raw"] > a["raw"]]
+        if not segments:
+            return None
+
+        if raw <= points[0]["raw"]:
+            low, high = segments[0]
+        elif raw >= points[-1]["raw"]:
+            low, high = segments[-1]
+        else:
+            low, high = segments[0]
+            for a, b in segments:
+                if a["raw"] <= raw <= b["raw"]:
+                    low, high = a, b
+                    break
+
+        span = high["raw"] - low["raw"]
+        return low["grams"] + (raw - low["raw"]) * (high["grams"] - low["grams"]) / span
+
+    def _warning(self):
+        points = self._sorted_points()
+        if len(points) < 3:
+            return None
+        steps = [b["grams"] - a["grams"] for a, b in zip(points, points[1:])]
+        if any(step > 0 for step in steps) and any(step < 0 for step in steps):
+            return "calibration points are not monotonic, check the table"
+        return None
 
     def reset(self):
         with self._lock:
@@ -138,11 +178,6 @@ class HX711:
             self.error = "invalid readings, check load cell wiring"
         return None
 
-    def _weight_for(self, raw):
-        if not self.scale:
-            return 0.0
-        return (raw - self.offset) / self.scale
-
     def _loop(self):
         while self._running:
             raw = self._read_valid()
@@ -150,11 +185,13 @@ class HX711:
                 time.sleep(0.5)
                 continue
             self.raw = raw
-            self.weight = self._weight_for(raw)
-            self.samples.append(round(self.weight, 1))
+            grams = self.grams_for(raw)
+            self.weight = grams if grams is not None else 0.0
+            if grams is not None:
+                self.samples.append(round(grams, 1))
             time.sleep(0.05)
 
-    def _sample(self, count):
+    def _sample(self, count=16):
         values = []
         for _ in range(count):
             raw = self._read_valid()
@@ -165,47 +202,55 @@ class HX711:
         values.sort()
         return values[len(values) // 2]
 
+    def capture(self, count=16):
+        raw = self._sample(count)
+        if raw is None:
+            return None
+        return {"raw": raw, "grams": self.grams_for(raw)}
+
     def tare(self, count=16):
-        median = self._sample(count)
-        if median is None:
+        raw = self._sample(count)
+        if raw is None:
             return None
-        self.offset = median
+        zeros = [p for p in self.points if abs(p["grams"]) < 1e-9]
+        if zeros:
+            zeros[0]["raw"] = raw
+        else:
+            self.points.append({"grams": 0.0, "raw": raw})
         self._save()
-        return self.offset
+        return raw
 
-    def calibrate(self, known_grams, count=16):
-        if known_grams <= 0:
-            raise ValueError("known weight must be positive")
-        median = self._sample(count)
-        if median is None:
-            return None
-        delta = median - self.offset
-        if abs(delta) < 1:
-            raise ValueError("no load detected, place the weight and try again")
-        self.scale = delta / float(known_grams)
+    def set_points(self, points):
+        cleaned = []
+        for point in points:
+            grams = float(point["grams"])
+            raw = int(point["raw"])
+            if grams < 0:
+                raise ValueError("weights must be zero or positive")
+            cleaned.append({"grams": grams, "raw": raw})
+        raws = [p["raw"] for p in cleaned]
+        if len(raws) != len(set(raws)):
+            raise ValueError("two points share the same raw signal")
+        self.points = cleaned
         self._save()
-        return self.scale
-
-    def reset_calibration(self):
-        self.scale = 0.0
-        self.offset = 0
-        self._save()
+        return self.points
 
     def get_state(self):
         recent = list(self.samples)[-8:]
-        stable = len(recent) >= 4 and (max(recent) - min(recent)) <= 2.0
+        stable = len(recent) >= 4 and (max(recent) - min(recent)) <= STABILITY_GRAMS
+        calibrated = self.is_calibrated()
+        grams = self.grams_for(self.raw) if calibrated else None
         return {
             "available": self.available,
             "error": self.error,
-            "calibrated": bool(self.scale),
-            "grams": round(self.weight, 1),
+            "calibrated": calibrated,
+            "grams": round(grams, 1) if grams is not None else None,
             "stable": stable,
             "raw": self.raw,
             "raw_hex": "0x%06X" % (self.raw & 0xFFFFFF),
             "pulse_us": self.pulse_us,
-            "offset": self.offset,
-            "scale": round(self.scale, 3) if self.scale else None,
-            "samples": list(self.samples)
+            "points": self._sorted_points(),
+            "warning": self._warning()
         }
 
     def close(self):

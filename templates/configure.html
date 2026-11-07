@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scale calibration · Cat Feeder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container wide">
+        <div class="page-head">
+            <a class="link-back" href="/">← Back</a>
+            <h1>Scale calibration</h1>
+        </div>
+
+        <div class="live-box">
+            <div class="live-item">
+                <span class="live-label">raw signal</span>
+                <span id="live-raw" class="live-value">—</span>
+            </div>
+            <div class="live-item">
+                <span class="live-label">weight</span>
+                <span id="live-grams" class="live-value">—</span>
+            </div>
+        </div>
+
+        <div id="live-status" class="status idle">Scale · —</div>
+
+        <div class="graph-container">
+            <canvas id="cal-graph"></canvas>
+        </div>
+        <div class="graph-labels">
+            <span id="graph-x-min">raw</span>
+            <span id="graph-x-max">raw</span>
+        </div>
+
+        <div id="points-list" class="cal-list"></div>
+
+        <div class="cal-actions">
+            <div class="input-group">
+                <label for="new-weight">New point</label>
+                <input id="new-weight" type="number" value="50" step="1" min="0">
+                <span>g</span>
+            </div>
+            <button class="btn btn-add" onclick="addPoint()">+</button>
+        </div>
+
+        <button class="btn btn-rotate" onclick="savePoints()">Save calibration</button>
+
+        <div id="save-status" class="status idle">Points stay local until you save</div>
+    </div>
+
+    <script src="{{ url_for('static', filename='configure.js') }}"></script>
+</body>
+
+</html>

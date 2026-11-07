@@ -5,6 +5,7 @@ from system import get_stats
 from scheduler import Scheduler
 from camera import CameraTrigger, list_photos, delete_photo, PHOTOS_DIR
 from scale import HX711
+from weightlog import WeightLog
 import config
 import os
 
@@ -17,6 +18,8 @@ scheduler = Scheduler()
 scheduler.set_motor(motor)
 scheduler.start()
 scale = HX711(dt_pin=config.HX711_DT_PIN, sck_pin=config.HX711_SCK_PIN)
+weight_history = WeightLog(scale, presence)
+weight_history.start()
 
 @app.post("/motor/open")
 def open_motor():
@@ -58,30 +61,53 @@ def get_weight():
 
 @app.post("/weight/tare")
 def tare_weight():
-    offset = scale.tare()
-    if offset is None:
-        return jsonify({"status":"error","error":"scale not available"}), 503
-    return jsonify({"status":"ok","offset":offset})
+    raw = scale.tare()
+    if raw is None:
+        return jsonify({"status":"error","error":"no reading, check the load cell"}), 503
+    return jsonify({"status":"ok","raw":raw})
 
-@app.post("/weight/calibrate")
-def calibrate_weight():
+@app.post("/weight/capture")
+def capture_weight():
+    reading = scale.capture()
+    if reading is None:
+        return jsonify({"status":"error","error":"no reading, check the load cell"}), 503
+    return jsonify(reading)
+
+@app.post("/calibration")
+def save_calibration():
     data = request.get_json(silent=True) or {}
+    points = data.get("points")
+    if not isinstance(points, list):
+        return jsonify({"status":"error","error":"points must be a list"}), 400
     try:
-        grams = float(data["grams"])
-    except (KeyError, TypeError, ValueError):
-        return jsonify({"status":"error","error":"grams required"}), 400
-    try:
-        factor = scale.calibrate(grams)
-    except ValueError as exc:
+        scale.set_points(points)
+    except (KeyError, TypeError, ValueError) as exc:
         return jsonify({"status":"error","error":str(exc)}), 400
-    if factor is None:
-        return jsonify({"status":"error","error":"scale not available"}), 503
     return jsonify(scale.get_state())
+
+@app.get("/configure")
+def configure():
+    return render_template("configure.html")
 
 @app.post("/weight/reset")
 def reset_weight():
     if not scale.reset():
         return jsonify({"status":"error","error":"scale not available"}), 503
+    return jsonify({"status":"ok"})
+
+@app.get("/weight/history")
+def get_weight_history():
+    return jsonify({
+        "samples": weight_history.get_all(),
+        "count": weight_history.count(),
+        "idle_interval": weight_history.idle_interval(),
+        "presence_interval": weight_history.presence_interval,
+        "presence": bool(presence.current)
+    })
+
+@app.delete("/weight/history")
+def clear_weight_history():
+    weight_history.clear()
     return jsonify({"status":"ok"})
 
 @app.get("/presence")
