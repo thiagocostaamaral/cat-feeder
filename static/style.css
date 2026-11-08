@@ -677,3 +677,48 @@ a.btn {
     text-align: center;
     margin-top: 8px;
 }
+
+.event-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 16px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.event-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.event-row.event-bad {
+    background: rgba(239, 68, 68, 0.10);
+    color: #f87171;
+}
+
+.event-time {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 700;
+}
+
+.event-flow {
+    margin-left: auto;
+}
+
+.event-steps {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.event-result {
+    min-width: 58px;
+    text-align: right;
+}

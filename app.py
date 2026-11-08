@@ -2,10 +2,10 @@ from flask import Flask, jsonify, render_template, request, send_from_directory
 from motor import StepperMotor
 from presence import PresenceSensor
 from system import get_stats
-from scheduler import Scheduler
 from camera import CameraTrigger, list_photos, delete_photo, PHOTOS_DIR
 from scale import HX711
 from weightlog import WeightLog
+from auto_feeder import AutoFeeder
 import config
 import os
 
@@ -14,25 +14,27 @@ motor = StepperMotor(pins=config.MOTOR_PINS)
 motor2 = StepperMotor(pins=config.MOTOR2_PINS)
 camera = CameraTrigger(cooldown=60)
 presence = PresenceSensor(pin=config.PIR_PIN, on_detect=camera.on_detect)
-scheduler = Scheduler()
-scheduler.set_motor(motor)
-scheduler.start()
 scale = HX711(dt_pin=config.HX711_DT_PIN, sck_pin=config.HX711_SCK_PIN)
 weight_history = WeightLog(scale, presence)
 weight_history.start()
+auto_feeder = AutoFeeder(scale, motor)
+auto_feeder.start()
 
 @app.post("/motor/open")
 def open_motor():
+    auto_feeder.stop()
     motor.rotate(512)
     return jsonify({"status":"ok"})
 
 @app.post("/motor/close")
 def close_motor():
+    auto_feeder.stop()
     motor.rotate(-512)
     return jsonify({"status":"ok"})
 
 @app.post("/motor/rotate")
 def rotate_motor():
+    auto_feeder.stop()
     data = request.get_json()
     rotation = int(data["rotation"])
     motor.rotate(rotation)
@@ -118,19 +120,27 @@ def get_presence():
 def get_status():
     return jsonify(get_stats())
 
-@app.get("/schedule")
-def get_schedule():
-    return jsonify(scheduler.get_all())
+@app.get("/auto")
+def get_auto():
+    return jsonify(auto_feeder.get_state())
 
-@app.post("/schedule")
-def add_schedule():
-    data = request.get_json()
-    entry = scheduler.add(data["time"], data["rotation"])
-    return jsonify(entry)
+@app.post("/auto")
+def set_auto():
+    data = request.get_json(silent=True) or {}
+    try:
+        auto_feeder.set_config(data)
+    except (ValueError, TypeError) as exc:
+        return jsonify({"status":"error","error":str(exc)}), 400
+    return jsonify(auto_feeder.get_state())
 
-@app.delete("/schedule/<schedule_id>")
-def remove_schedule(schedule_id):
-    scheduler.remove(schedule_id)
+@app.post("/auto/dose")
+def dose_auto():
+    auto_feeder.dose_once()
+    return jsonify({"status":"ok"})
+
+@app.post("/auto/stop")
+def stop_auto():
+    auto_feeder.stop()
     return jsonify({"status":"ok"})
 
 @app.get("/photos")

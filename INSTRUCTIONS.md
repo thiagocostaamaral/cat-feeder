@@ -9,6 +9,7 @@ Smart cat feeder web app running on a **Raspberry Pi**. Flask backend controls a
 - **Presence sensor:** `presence.py` (MH-SR602 PIR sensor, GPIO via lgpio)
 - **Load cell:** `scale.py` (HX711 24-bit ADC, bit-banged directly over lgpio, powered from 3.3V)
 - **Weight history:** `weightlog.py` (background sampler: every 10 min, every 10 s while presence is detected)
+- **Feeding logic:** `auto_feeder.py` (weight-driven refill of motor 1 — replaces the old time scheduler)
 - **Frontend:** HTML + CSS + vanilla JS (`templates/`, `static/`)
 - **Pi service:** systemd unit at `/etc/systemd/system/cat-feeder.service`
 
@@ -19,10 +20,10 @@ cat-feeder/
 ├── motor.py            # StepperMotor class (lgpio)
 ├── presence.py         # PresenceSensor class (MH-SR602 PIR, lgpio)
 ├── system.py           # System stats (CPU, RAM, temp, uptime from /proc)
-├── scheduler.py        # Feeding schedule (background thread, JSON storage)
 ├── camera.py           # OV5647 camera capture (rpicam-still), PhotoTrigger
 ├── scale.py            # HX711 driver over lgpio + multi-point calibration (scale.json)
 ├── weightlog.py        # Periodic weight samples -> weight_log.jsonl (10min / 10s with presence)
+├── auto_feeder.py      # Weight-driven motor 1 refill controller (feeding.json, feed_log.jsonl)
 ├── config.py           # Configuration (pins: MOTOR_PINS, MOTOR2_PINS, PIR_PIN, HX711 pins)
 ├── requirements.txt    # Python dependencies
 ├── templates/
@@ -42,7 +43,7 @@ cat-feeder/
 ## API Endpoints
 | Method | Route           | Body              | Response                                      |
 |--------|-----------------|-------------------|-----------------------------------------------|
-| GET    | `/`             | —                 | HTML page (6 tabs: Feeder, Presence, System, Schedule, Photos, Weight) |
+| GET    | `/`             | —                 | HTML page (6 tabs: Feeder, Presence, System, Auto, Photos, Weight) |
 | POST   | `/motor/open`   | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/close`  | —                 | `{"status":"ok"}`                             |
 | POST   | `/motor/rotate` | `{"rotation": N}` | `{"status":"ok","rotation":N}`                |
@@ -51,9 +52,10 @@ cat-feeder/
 | POST   | `/motor2/rotate`| `{"rotation": N}` | `{"status":"ok","rotation":N}`                |
 | GET    | `/presence`     | —                 | `{"current":bool,"samples":[0,1,0,...]}`      |
 | GET    | `/status`       | —                 | `{"cpu_percent":N,"ram":{...},"temperature_c":N,"uptime":"...","time":"HH:MM:SS"}` |
-| GET    | `/schedule`     | —                 | `[{id,time,rotation},...]`                    |
-| POST   | `/schedule`     | `{"time":"08:00","rotation":50}` | `{id,time,rotation}`               |
-| DELETE | `/schedule/<id>`| —                 | `{"status":"ok"}`                             |
+| GET    | `/auto`         | —                 | `{"enabled":bool,"state":str,"message":str,"weight":N,"filtered_g":N,"low_g":N,"target_g":N,"grams_per_step":N,"low_for_s":N,"dwell_left_s":N,"cooldown_left_s":N,"last_reset":{t,reason},"last_refill":{...},"events":[...],"config":{...}}` |
+| POST   | `/auto`         | `{"enabled":b,"low_g":N,"target_g":N,...}` | updated state, or 400 |
+| POST   | `/auto/dose`    | —                 | `{"status":"ok"}` (request one refill now)     |
+| POST   | `/auto/stop`    | —                 | `{"status":"ok"}` (abort the refill in flight) |
 | GET    | `/photos`       | —                 | `[{name,url},...]`                            |
 | GET    | `/photos/<name>`| —                 | Serves JPEG file                              |
 | DELETE | `/photos/<name>`| —                 | `{"status":"ok"}`                             |
@@ -70,11 +72,26 @@ Open = 512 steps, Close = -512 steps.
 Motor 1 dispensing pins = BCM [17,18,27,22] (physical 11,12,13,15). Motor 2 = BCM [5,6,13,19] (physical 29,31,33,35, at the far right edge of the header).
 Presence samples = rolling last 120 seconds (1 sample/sec). Motion triggers camera (60s cooldown).
 Status = live CPU/RAM/temp/uptime/time from /proc (100ms sample for CPU).
-Schedule = stored in `schedules.json`, background thread checks every 5s and fires motor at matching HH:MM.
+Schedule = **removed** (was `scheduler.py` + `/schedule`). Motor 1 is now driven by `auto_feeder.py`; motor 2 stays manual. Do not re-add a time schedule.
 Photos = stored in `Photos/` directory, captured by OV5647 via rpicam-still when PIR detects motion.
 Weight = HX711 on BCM 24 (DT) / 25 (SCK), sampled ~10Hz by a background thread. Calibration is a table of `{grams, raw}` points persisted in `scale.json`; weight is piecewise-linear interpolation between points and linear extrapolation beyond the outer two. An inverted load cell (raw falls as weight rises) works fine — the sign comes from the measured points, not from a hardcoded offset.
 Weight workflow = the Weight tab shows the value + Tare + Configure. `/configure` is the calibration page: live raw/weight, a Capture button per point (median of 16 frames), a raw-vs-weight graph, and Save. Tare records the 0 g point. `calibrated:false` means fewer than 2 captured points.
 Weight history = `weightlog.py` appends one JSON line `{t, g}` to `weight_log.jsonl` every 600s, or every 10s while `presence.current` is true. Append-only on purpose (a full rewrite every 10s would wear the SD card). It only logs when the scale is calibrated and has no error, keeps the newest 5000 samples in memory (and rewrites the file when it passes 6000), and the Weight tab charts the last 1000 (`GET /weight/history`).
+
+## Auto refill (motor 1)
+`auto_feeder.py` runs a background control loop. It never uses a fixed steps-per-gram constant; every dose is corrected by what the scale measured.
+
+Trigger (all required): weight **< `low_g`** (10 g) **continuously for `low_dwell_s`** (300 s) — this defeats the cat pausing 20 s mid-meal — and a **stable** reading, and **`cooldown_s` (300 s) since the last attempt**.
+
+The dwell is filtered so a single bad sample cannot wipe it: `_tick` keeps the last 5 in-range readings and "no longer low" requires **all of them to be ≥ `low_g`** (at least 3 samples). A one-tick spike, a transient HX711 error (`clock pulse too slow` / `no data`) or one impossible frame does **not** reset the counter; three consecutive impossible frames do. `/auto` exposes `weight`, `filtered_g`, `low_for_s`, `dwell_left_s` and `last_reset: {t, reason}` so a restarting counter can be explained from the API instead of guessed.
+
+Dose loop: `gap = target_g - weight`; burst = `gap * coarse_factor (0.85) / grams_per_step` when the gap is large, `gap * fine_factor (0.5)` when it is small, clamped to `[min_steps, max_cycle_steps]`. After each burst it sleeps `settle_s` (2 s) and re-measures with `scale.capture()` (median of 16 frames). It stops when `gap <= tolerance_g`. `grams_per_step` is **seeded at 0.08** (the user's "50 steps ≈ 4 g" measurement) and re-learned from every clean dose (`delta / steps`, EMA 0.5, accepted while within 0.2x–5x the current value), persisted to `feeding.json`. No bench calibration is needed: a wrong seed self-corrects within one or two refills. If the seed under-estimates the yield, the first refill deliberately overshoots (that is expected and fine); if it over-estimates, the refill just uses more cycles, which is why `max_total_steps` is 2500.
+
+Safety: aborts on two consecutive no-output cycles ("nothing dispensed (hopper empty?)"), `max_cycles`, `max_total_steps`, scale error, implausible weight (> `plausible_max_g` = a cat on the platform) or a missing bowl (weight < `bowl_min_g`). Every attempt is appended to `feed_log.jsonl` as `{t, before, after, steps, cycles, result}` and shown on the Auto tab.
+
+PIR handling: **not used by the feeder controller at all** — it only drives the camera and the Presence tab. The refill decision is weight-only (low + dwell + stable + cooldown), because the PIR proved unreliable and gating food on it risked starving the cat. If the cat is at the bowl, the reading is unstable and the trigger will not fire; no sensor interlock is involved, so a refill may start while the cat is eating from an already-empty bowl.
+
+Tuning: the Auto tab has the low/target thresholds, an enable toggle, **Dose once** (manual refill for bench tests) and **Stop**. Manual motor commands on the Feeder tab abort an in-flight refill.
 
 ## HX711 troubleshooting
 `scale.py` surfaces the problem through `GET /weight`: `error` carries a human-readable reason and `raw` is reported in decimal and hex. The Weight tab shows both. The sensor is opened at startup, so restart the service after changing hardware. Without the web UI:

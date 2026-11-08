@@ -235,9 +235,14 @@ class HX711:
         self._save()
         return self.points
 
+    @property
+    def stable(self):
+        recent = list(self.samples)[-8:]
+        return len(recent) >= 4 and (max(recent) - min(recent)) <= STABILITY_GRAMS
+
     def get_state(self):
         recent = list(self.samples)[-8:]
-        stable = len(recent) >= 4 and (max(recent) - min(recent)) <= STABILITY_GRAMS
+        stable = self.stable
         calibrated = self.is_calibrated()
         grams = self.grams_for(self.raw) if calibrated else None
         return {

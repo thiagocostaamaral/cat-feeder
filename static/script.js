@@ -3,6 +3,8 @@ let presenceInterval = null;
 let systemInterval = null;
 let weightInterval = null;
 let historyInterval = null;
+let autoInterval = null;
+let autoState = null;
 let selectedMotor = 1;
 let motorRunning = false;
 
@@ -84,6 +86,7 @@ function switchTab(name) {
     stopSystemPolling();
     stopWeightPolling();
     stopHistoryPolling();
+    stopAutoPolling();
 
     if (name === "presence") startPresencePolling();
     if (name === "system") startSystemPolling();
@@ -91,7 +94,7 @@ function switchTab(name) {
         startWeightPolling();
         startHistoryPolling();
     }
-    if (name === "schedule") fetchSchedules();
+    if (name === "auto") startAutoPolling();
     if (name === "photos") fetchPhotos();
 }
 
@@ -197,47 +200,119 @@ function updateSystemUI(data) {
     document.getElementById("uptime-text").textContent = data.uptime;
 }
 
-async function fetchSchedules() {
+function startAutoPolling() {
+    if (autoInterval) return;
+    fetchAuto();
+    autoInterval = setInterval(fetchAuto, 1000);
+}
+
+function stopAutoPolling() {
+    if (autoInterval) {
+        clearInterval(autoInterval);
+        autoInterval = null;
+    }
+}
+
+async function fetchAuto() {
     try {
-        const response = await fetch("/schedule");
-        renderSchedules(await response.json());
+        const response = await fetch("/auto");
+        autoState = await response.json();
+        renderAuto(autoState);
     } catch {}
 }
 
-function renderSchedules(schedules) {
-    const list = document.getElementById("schedule-list");
-    if (!schedules.length) {
-        list.innerHTML = '<div class="stat-row"><span style="color:rgba(255,255,255,0.3);font-size:14px;width:100%;text-align:center">No schedules</span></div>';
+function renderAuto(data) {
+    const status = document.getElementById("auto-status");
+    const weight = document.getElementById("auto-weight");
+
+    weight.textContent = data.weight.toFixed(1) + " g";
+
+    let text = "Auto · " + data.state;
+    if (data.message) text += " · " + data.message;
+    if (data.state === "waiting" && data.dwell_left_s > 0) {
+        text += " · dwell " + Math.ceil(data.dwell_left_s) + "s";
+    } else if (data.state === "waiting" && data.cooldown_left_s > 0) {
+        text += " · cooldown " + Math.ceil(data.cooldown_left_s) + "s";
+    }
+    status.textContent = text;
+
+    const type = data.state === "fault" ? "error"
+        : (data.state === "dosing" || data.state === "settling" || data.state === "paused") ? "loading"
+        : data.state === "off" ? "idle" : "success";
+    status.className = "status " + type;
+
+    document.getElementById("auto-toggle").textContent = data.enabled ? "Disable" : "Enable";
+
+    const lowEl = document.getElementById("auto-low");
+    const targetEl = document.getElementById("auto-target");
+    if (document.activeElement !== lowEl) lowEl.value = data.low_g;
+    if (document.activeElement !== targetEl) targetEl.value = data.target_g;
+
+    document.getElementById("auto-gps").textContent =
+        data.grams_per_step.toFixed(3) + " g/step learned · " + data.target_g + " g target";
+
+    renderAutoEvents(data.events || []);
+}
+
+function renderAutoEvents(events) {
+    const list = document.getElementById("auto-events");
+    if (!events.length) {
+        list.innerHTML = '<div class="cal-empty">No refills yet</div>';
         return;
     }
-    list.innerHTML = schedules.map(s => `
-        <div class="schedule-item">
-            <span class="schedule-time">${s.time}</span>
-            <span class="schedule-rot">${s.rotation} steps</span>
-            <button class="btn-del" onclick="removeSchedule('${s.id}')">✕</button>
-        </div>
-    `).join("");
+    list.innerHTML = events.slice().reverse().map(event => {
+        const time = new Date(event.t * 1000).toTimeString().slice(0, 5);
+        const after = event.after == null ? "—" : event.after.toFixed(1);
+        const ok = event.result === "ok";
+        return `
+            <div class="event-row${ok ? "" : " event-bad"}">
+                <span class="event-time">${time}</span>
+                <span class="event-flow">${event.before.toFixed(1)} → ${after} g</span>
+                <span class="event-steps">${event.steps} steps</span>
+                <span class="event-result">${event.result}</span>
+            </div>
+        `;
+    }).join("");
 }
 
-async function addSchedule() {
-    const time = document.getElementById("schedule-time").value;
-    const rotation = parseInt(document.getElementById("schedule-rotation").value);
-    if (!time) return;
+async function toggleAuto() {
+    const enabled = !(autoState && autoState.enabled);
     try {
-        await fetch("/schedule", {
+        await fetch("/auto", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ time, rotation })
+            body: JSON.stringify({ enabled })
         });
-        fetchSchedules();
     } catch {}
+    fetchAuto();
 }
 
-async function removeSchedule(id) {
+async function saveAutoField() {
+    const low = parseFloat(document.getElementById("auto-low").value);
+    const target = parseFloat(document.getElementById("auto-target").value);
+    if (isNaN(low) || isNaN(target)) return;
     try {
-        await fetch(`/schedule/${id}`, { method: "DELETE" });
-        fetchSchedules();
+        await fetch("/auto", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ low_g: low, target_g: target })
+        });
     } catch {}
+    fetchAuto();
+}
+
+async function doseOnce() {
+    try {
+        await fetch("/auto/dose", { method: "POST" });
+    } catch {}
+    fetchAuto();
+}
+
+async function stopAuto() {
+    try {
+        await fetch("/auto/stop", { method: "POST" });
+    } catch {}
+    fetchAuto();
 }
 
 async function fetchPhotos() {

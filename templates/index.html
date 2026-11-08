@@ -17,7 +17,7 @@
             <button class="tab active" onclick="switchTab('feeder')">Feeder</button>
             <button class="tab" onclick="switchTab('presence')">Presence</button>
             <button class="tab" onclick="switchTab('system')">System</button>
-            <button class="tab" onclick="switchTab('schedule')">Schedule</button>
+            <button class="tab" onclick="switchTab('auto')">Auto</button>
             <button class="tab" onclick="switchTab('photos')">Photos</button>
             <button class="tab" onclick="switchTab('weight')">Weight</button>
         </div>
@@ -100,13 +100,39 @@
             </div>
         </div>
 
-        <div id="tab-schedule" class="tab-content">
-            <div class="schedule-add">
-                <input id="schedule-time" type="time" class="time-input" value="08:00">
-                <input id="schedule-rotation" type="number" value="50" min="1" class="rot-input">
-                <button class="btn btn-add" onclick="addSchedule()">+</button>
+        <div id="tab-auto" class="tab-content">
+            <div id="auto-status" class="status idle">Auto · —</div>
+
+            <div class="stat-row" style="margin-top:16px">
+                <span class="stat-label">Now</span>
+                <span id="auto-weight" class="stat-value" style="flex:1;text-align:right">—</span>
             </div>
-            <div id="schedule-list" class="schedule-list"></div>
+
+            <div class="controls">
+                <div class="input-group">
+                    <label for="auto-low">Refill below</label>
+                    <input id="auto-low" type="number" value="10" step="1" min="0"
+                           onchange="saveAutoField()">
+                    <span>g</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="auto-target">Fill to</label>
+                    <input id="auto-target" type="number" value="40" step="1" min="1"
+                           onchange="saveAutoField()">
+                    <span>g</span>
+                </div>
+
+                <button class="btn btn-open" id="auto-toggle" onclick="toggleAuto()">Disable</button>
+
+                <div class="btn-row">
+                    <button class="btn btn-open" onclick="doseOnce()">▶ Dose once</button>
+                    <button class="btn btn-close" onclick="stopAuto()">■ Stop</button>
+                </div>
+            </div>
+
+            <div id="auto-events" class="event-list"></div>
+            <div id="auto-gps" class="history-note">—</div>
         </div>
 
         <div id="tab-photos" class="tab-content">
